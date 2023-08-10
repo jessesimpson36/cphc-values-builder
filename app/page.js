@@ -26,7 +26,7 @@ export default function Home() {
   
   const [inputText, setInputText ] = useState("");
   const [baseUrl, setBaseUrl ] = useState("");
-  const [ingressType, setIngressType ] = useState("");
+  const [ingressType, setIngressType ] = useState("combined");
   const [deploymentType, setDeploymentType ] = useState("remote");
 
   const [identityEnabled, handleToggleIdentity] = useState(true);
