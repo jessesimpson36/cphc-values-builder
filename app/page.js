@@ -435,7 +435,7 @@ elasticsearch:
               helm chart and the application functions, then you can move onto more advanced
               options. Our options are documented in the
             </p>
-            <a href="https://github.com/camunda/camunda-platform-helm/charts/camunda-platform">
+            <a href="https://github.com/camunda/camunda-platform-helm/tree/main/charts/camunda-platform">
               Camunda Platform Helm Chart Repository in GitHub
             </a>
             <p>
