@@ -1,113 +1,452 @@
+'use client'
+
 import Image from 'next/image'
+import { Button,
+  Grid,
+  Column,
+  Checkbox,
+  CheckboxGroup,
+  CodeSnippet,
+  TextInput,
+  RadioButton,
+  RadioButtonGroup,
+  Heading,
+  Tooltip,
+  ComposedModal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@carbon/react';
+import { Information } from '@carbon/icons-react';
+import { ChangeEvent, useState, useRef } from "react";
+import { createPortal } from 'react-dom';
+import './page.scss';
 
 export default function Home() {
+  
+  const [inputText, setInputText ] = useState("");
+  const [baseUrl, setBaseUrl ] = useState("");
+  const [ingressType, setIngressType ] = useState("");
+  const [deploymentType, setDeploymentType ] = useState("remote");
+
+  const [identityEnabled, handleToggleIdentity] = useState(true);
+  const [tasklistEnabled, handleToggleTasklist] = useState(true);
+  const [operateEnabled, handleToggleOperate] = useState(true);
+  const [optimizeEnabled, handleToggleOptimize] = useState(false);
+  const [zeebeEnabled, handleToggleZeebe] = useState(true);
+  const [modelerEnabled, handleToggleModeler] = useState(false);
+  const [ingressClassName, handleIngressClass] = useState("");
+  const [pullSecret, handlePullSecrets] = useState("");
+  const [tlsSecret, handleTLSSecrets] = useState("");
+  const [tlsEnabled, handleTLSEnabled] = useState("http");
+  const button = useRef();
+
+  const ModalStateManager = ({
+      renderLauncher: LauncherContent,
+      children: ModalContent
+    }) => {
+      const [open, setOpen] = useState(false);
+      return <>
+          {!ModalContent || createPortal(<ModalContent open={open} setOpen={setOpen} />, document.body)}
+          {LauncherContent && <LauncherContent open={open} setOpen={setOpen} />}
+        </>;
+    };
+  
+
+
+  const handleRepositoryChange = e => {
+    setInputText(e.target.value);
+  };
+
+  const handleBaseUrlChange = e => {
+    setBaseUrl(e.target.value);
+  };
+
+  const handleIngressTypeChange = e => {
+    console.log(e);
+    setIngressType(e);
+  };
+
+  const handleDeploymentTypeChange = e => {
+    setDeploymentType(e);
+  };
+
+  const toggleZeebe = e => {
+    handleToggleZeebe(e.target.checked);
+  };
+
+
+  const toggleOperate = e => {
+    handleToggleOperate(e.target.checked);
+  };
+
+
+  const toggleOptimize = e => {
+    handleToggleOptimize(e.target.checked);
+  };
+
+
+  const toggleTasklist = e => {
+    handleToggleTasklist(e.target.checked);
+  };
+
+  const toggleIdentity = e => {
+    handleToggleIdentity(e.target.checked);
+  };
+
+  const toggleModeler = e => {
+    handleToggleModeler(e.target.checked);
+  };
+
+  const handleIngressClassNameChange = e => {
+    handleIngressClass(e.target.value);
+  };
+
+  const handlePullSecretsChange = e => {
+    handlePullSecrets(e.target.value);
+  };
+
+  const handleTLSSecretChange = e => {
+    handleTLSSecrets(e.target.value);
+    handleTLSEnabled(e.target.value == "" ? "http" : "https");
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+    <div>
+      <Heading>Camunda Platform values.yaml creator</Heading>
+      <br />
+      <br />
+      <div className="cds--grid">
+        <div className="cds--row">
+          <div className="cds--col">
+            <CodeSnippet type="multi" minCollapsedNumberOfRows={110}>
+  {`
+global:`}
+{ (inputText != '' || pullSecret != '') && `
+  image:`}
+{ inputText != '' && `
+    registry: ${inputText}`}
+{ pullSecret != '' && `
+    pullSecret: 
+      - name: ${pullSecret}`}
+{ (ingressType == 'separated' && baseUrl != '') && `
+  identity:
+    auth:
+      publicIssuerUrl: "${tlsEnabled}://keycloak.${baseUrl}/auth/realms/camunda-platform"
+      operate:
+        redirectUrl: "${tlsEnabled}://operate.${baseUrl}"
+      optimize:
+        redirectUrl: "${tlsEnabled}://optimize.${baseUrl}"
+      tasklist:
+        redirectUrl: "${tlsEnabled}://tasklist.${baseUrl}"
+      webModeler:
+        redirectUrl: "${tlsEnabled}://modeler.${baseUrl}"`}
+{ (ingressType == 'combined' && baseUrl != '') && `
+  ingress:
+    enabled: true
+    className: ${ingressClassName}
+    host: ${baseUrl}`}
+{ (ingressType == 'combined' && baseUrl != '' && tlsSecret != '') && `
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{ (ingressType == 'combined' && baseUrl != '') && `
+  identity:
+    auth:
+      publicIssuerUrl: "${tlsEnabled}://${baseUrl}/auth/realms/camunda-platform"
+      operate:
+        redirectUrl: "${tlsEnabled}://${baseUrl}/operate"
+      optimize:
+        redirectUrl: "${tlsEnabled}://${baseUrl}/tasklist"
+      tasklist:
+        redirectUrl: "${tlsEnabled}://${baseUrl}/optimize"
+      webModeler:
+        redirectUrl: "${tlsEnabled}://${baseUrl}/modeler"`}
+{`
+`}
+{`
+zeebe:
+  enabled: ${zeebeEnabled}`}
+{(zeebeEnabled && deploymentType == 'local') && `
+  clusterSize: "1"
+  partitionCound: "1"
+  replicationFactor: "1"`}
+{`
+`}
+{`
+operate:
+  enabled: ${operateEnabled}`}
+{(ingressType == 'separated' && baseUrl != '' && operateEnabled) && `
+  ingress:
+    enabled: true
+    className: ${ingressClassName}
+    host: operate.${baseUrl}`}
+{(ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && operateEnabled) && `
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{`
+`}
+{`
+tasklist:
+  enabled: ${tasklistEnabled}`}
+{(ingressType == 'separated' && baseUrl != '' && tasklistEnabled) && `
+  ingress:
+    enabled: true
+    className: ${ingressClassName}
+    host: tasklist.${baseUrl}`}
+{(ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && tasklistEnabled) && `
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{`
+`}
+{`
+optimize:
+  enabled: ${optimizeEnabled}`}
+{(ingressType == 'separated' && baseUrl != '' && optimizeEnabled) && `
+  ingress:
+    enabled: true
+    className: ${ingressClassName}
+    host: optimize.${baseUrl}`}
+{(ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && optimizeEnabled) && `
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{`
+`}
+{`
+identity:
+  enabled: ${identityEnabled}`}
+{(ingressType == 'combined' && baseUrl != '' && identityEnabled) && `
+  contextPath: "/identity"
+  fullURL: "${tlsEnabled}://${baseUrl}/identity`}
+{(ingressType == 'separated' && baseUrl != '' && identityEnabled) && `
+  ingress:
+    enabled: true
+    className: ${ingressClassName}
+    host: identity.${baseUrl}`}
+{(ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && identityEnabled) && `
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{ingressType == 'separated' && baseUrl != '' && identityEnabled && `
+  fullURL: ${tlsEnabled}://identity.${baseUrl}
+  keycloak:
+    proxy: edge
+    ingress:
+      enabled: true
+      ingressClassName: ${ingressClassName}
+      hostname: keycloak.${baseUrl}`}
+{ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && identityEnabled && `
+      extraTls:
+        - hosts:
+          - keycloak.${baseUrl}
+          secretName: ${tlsSecret}`}
+{`
+`}
+{`
+webModeler:
+  enabled: ${modelerEnabled}`}
+{modelerEnabled && `
+  restapi:
+    mail:
+      fromAddress: fake@fake.com`}
+{modelerEnabled && `
+  webapp:`}
+{ ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
+    host: modeler.${baseUrl}
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{ modelerEnabled && `
+  websockets:`}
+{ ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
+    host: modeler.${baseUrl}
+    tls:
+      enabled: true
+      secretName: ${tlsSecret}`}
+{`
+`}
+{ zeebeEnabled && `
+zeebe-gateway:`}
+{ ingressType != 'none' && ingressType != '' && zeebeEnabled && `
+  ingress:
+    enabled: ${zeebeEnabled}`}
+{ ingressType != 'none' &&  ingressType != '' && zeebeEnabled && ingressClassName != '' && `
+    className: ${ingressClassName}`}
+{zeebeEnabled && baseUrl != '' && ingressType != 'none' &&  ingressType != '' && `
+    host: zeebe.${baseUrl}`}
+{(zeebeEnabled && deploymentType == 'local' ) && `
+  replicas: 1`}
+{`
+`}
+{deploymentType == 'local' && `
+elasticsearch:
+  clusterHealthCheckParams: "wait_for_status=yellow&timeout=1s"
+  replicas: 1
+  antiAffinity: "soft"`}
+            </CodeSnippet>
+          </div>
+          <div className="cds--col">
+            <TextInput
+              helperText="Base url without http:// or https://"
+              id="base_url"
+              invalidText="invalid base url"
+              labelText="Base url for each component"
+              placeholder="local.distro.ultrawombat.com"
+              onChange={handleBaseUrlChange}
             />
-          </a>
+            <br />
+            <TextInput
+              helperText="Private registry hostname"
+              id="registry_hostname"
+              invalidText="invalid"
+              labelText="Registry hostname"
+              placeholder="quay.io/camunda"
+              onChange={handleRepositoryChange}
+            />
+            <br />
+            <RadioButtonGroup
+              name="deployment_type"
+              legendText="Deployment type"
+              id="deployment_type"
+              onChange={handleDeploymentTypeChange}
+              defaultSelected="remote">
+              <RadioButton labelText="Local" value="local" id="local" />
+              <RadioButton labelText="Remote" value="remote" id="remote" />
+            </RadioButtonGroup>
+            <br />
+            <RadioButtonGroup
+              name="ingress_type"
+              legendText="Ingress Type"
+              id="ingress_type"
+              onChange={handleIngressTypeChange}
+              defaultSelected="combined">
+              <RadioButton labelText="None" value="none" id="radio-none" />
+              <RadioButton labelText="Combined" value="combined" id="radio-combined" />
+              <RadioButton labelText="Separated" value="separated" id="radio-separated" />
+            </RadioButtonGroup>
+            <br />
+            <CheckboxGroup legendText="Enable Components" helperText="Enable Components">
+              <Checkbox id="zeebeEnabled" labelText="Zeebe" defaultChecked={true} onChange={toggleZeebe} />
+              <Checkbox id="operateEnabled" labelText="Operate" defaultChecked={true} onChange={toggleOperate} />
+              <Checkbox id="tasklistEnabled" labelText="Tasklist" defaultChecked={true} onChange={toggleTasklist} />
+              <Checkbox id="optimizeEnabled" labelText="Optimize" defaultChecked={false} onChange={toggleOptimize} />
+              <Checkbox id="identityEnabled" labelText="Identity" defaultChecked={true} onChange={toggleIdentity} />
+              <Checkbox id="modelerEnabled" labelText="Web Modeler" defaultChecked={false} onChange={toggleModeler} />
+            </CheckboxGroup>
+            <br />
+            <TextInput
+              helperText="Ingress Class Name"
+              id="ingress_class_name"
+              invalidText="invalid"
+              labelText="Ingress Class Name"
+              placeholder="nginx"
+              onChange={handleIngressClassNameChange}
+            />
+            <Tooltip align="bottom" label={"The name of the IngressClass kubernetes resource. Set up an Ingress Controller if you do not have any available IngressClass's yet."}>
+              <button className="sb-tooltip-trigger" type="button" >
+                <Information />
+              </button>
+            </Tooltip>
+
+
+            <ModalStateManager
+              renderLauncher={({ setOpen }) => (
+                <Button ref={button} onClick={() => setOpen(true)}>
+                  <Information /> Help
+                </Button>
+              )}
+            >
+              {({ open, setOpen }) => (
+                <ComposedModal open={open} onClose={() => setOpen(false)}>
+                  <ModalHeader
+                    label="Account resources"
+                    title="Install an Ingress Controller"
+                  />
+                  <ModalBody>
+                    If you do not know what an ingress class is, and have not
+                    yet installed one, save the following as
+                    nginx_ingress_values.yaml
+                    <CodeSnippet type="multi">
+                      {`controller:
+  ingressClassResource:
+    default: true
+  replicaCount: 1
+  admissionWebhooks:
+    enabled: false
+  hostNetwork: true`}
+                      {deploymentType == "local" &&
+                        `
+  service:
+    type: NodePort`}
+                      {deploymentType == "remote" &&
+                        `
+  service:
+    type: LoadBalancer`}
+                    </CodeSnippet>
+                    And then run the following command to install the Nginx
+                    Ingress Controller:
+                    <CodeSnippet type="multi">
+                      {`helm install -f nginx_ingress_values.yaml nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.17.1`}
+                    </CodeSnippet>
+                  </ModalBody>
+                </ComposedModal>
+              )}
+            </ModalStateManager>
+
+            <br />
+            <br />
+            <TextInput
+              helperText="Pull Secrets"
+              id="pull_secrets"
+              invalidText="invalid"
+              labelText="Name of kubernetes secret with docker registry credentials"
+              placeholder="registry-camunda-cloud"
+              onChange={handlePullSecretsChange}
+            />
+            <Tooltip align="bottom" label={"Create a TLS secret with `kubectl create secret docker-registry <name> --docker-server=<host> --docker-username=<username> --docker-password=<password>` and enter the name of the secret here. "}>
+              <button className="sb-tooltip-trigger" type="button">
+                <Information />
+              </button>
+            </Tooltip>
+            <br />
+            <br />
+            <TextInput
+              helperText="Name of TLS Secret"
+              id="tls_secret_name"
+              invalidText="invalid"
+              labelText="Name of TLS Secret"
+              placeholder="local-distro-ultrawombat-tls"
+              onChange={handleTLSSecretChange}
+            />
+            <Tooltip align="bottom" label={"Create a TLS secret with `kubectl create secret tls <name> --cert=<path_to_cert> --key=<path_to_key>` and enter the name of the secret here.  This will also change all urls to https"}>
+              <button className="sb-tooltip-trigger" type="button">
+                <Information />
+              </button>
+            </Tooltip>
+            <br />
+            <br />
+            <br />
+            <Heading>What now?</Heading>
+            <p>
+              The options above represents a basic installation. If you have deployed the
+              helm chart and the application functions, then you can move onto more advanced
+              options. Our options are documented in the
+            </p>
+            <a href="https://github.com/camunda/camunda-platform-helm/charts/camunda-platform">
+              Camunda Platform Helm Chart Repository in GitHub
+            </a>
+            <p>
+              and more component-specific options may be found in
+            </p>
+            <a href="https://docs.camunda.io/docs/self-managed/platform-deployment/helm-kubernetes/deploy">
+              Camunda Platform Docs
+            </a>
+          </div>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   )
 }
