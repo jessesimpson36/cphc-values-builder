@@ -18,9 +18,69 @@ import { Button,
   ModalFooter,
 } from '@carbon/react';
 import { Information } from '@carbon/icons-react';
-import { ChangeEvent, useState, useRef } from "react";
+import { ChangeEvent, useState, useRef, useEffect } from "react";
 import { createPortal } from 'react-dom';
 import './page.scss';
+
+function LoadModalAfterMount(props) {
+  if (!props.display) {
+    return null;
+  }
+  var ModalStateManager = ({
+      renderLauncher: LauncherContent,
+      children: ModalContent
+    }) => {
+      const [open, setOpen] = useState(false);
+      return <>
+          {!ModalContent || createPortal(<ModalContent open={open} setOpen={setOpen} />, document.body)}
+          {LauncherContent && <LauncherContent open={open} setOpen={setOpen} />}
+        </>;
+    };
+  return (
+            <ModalStateManager
+              renderLauncher={({ setOpen }) => (
+                <Button ref={props.button} onClick={() => setOpen(true)}>
+                  <Information /> Help
+                </Button>
+              )}
+            >
+              {({ open, setOpen }) => (
+                <ComposedModal open={open} onClose={() => setOpen(false)}>
+                  <ModalHeader
+                    label="Account resources"
+                    title="Install an Ingress Controller"
+                  />
+                  <ModalBody>
+                    If you do not know what an ingress class is, and have not
+                    yet installed one, save the following as
+                    nginx_ingress_values.yaml
+                    <CodeSnippet type="multi">
+                      {`controller:
+  ingressClassResource:
+    default: true
+  replicaCount: 1
+  admissionWebhooks:
+    enabled: false
+  hostNetwork: true`}
+                      {props.deploymentType == "local" &&
+                        `
+  service:
+    type: NodePort`}
+                      {props.deploymentType == "remote" &&
+                        `
+  service:
+    type: LoadBalancer`}
+                    </CodeSnippet>
+                    And then run the following command to install the Nginx
+                    Ingress Controller:
+                    <CodeSnippet type="multi">
+                      {`helm install -f nginx_ingress_values.yaml nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.17.1`}
+                    </CodeSnippet>
+                  </ModalBody>
+                </ComposedModal>
+              )}
+            </ModalStateManager>);
+}
 
 export default function Home() {
   
@@ -39,19 +99,14 @@ export default function Home() {
   const [pullSecret, handlePullSecrets] = useState("");
   const [tlsSecret, handleTLSSecrets] = useState("");
   const [tlsEnabled, handleTLSEnabled] = useState("http");
+  const [display, setDisplay] = useState(false);
   const button = useRef();
+  var ModalStateManager = () => null;
 
-  const ModalStateManager = ({
-      renderLauncher: LauncherContent,
-      children: ModalContent
-    }) => {
-      const [open, setOpen] = useState(false);
-      return <>
-          {!ModalContent || createPortal(<ModalContent open={open} setOpen={setOpen} />, document.body)}
-          {LauncherContent && <LauncherContent open={open} setOpen={setOpen} />}
-        </>;
-    };
-  
+  useEffect(() => {
+    setDisplay(true);
+
+  }, []);
 
 
   const handleRepositoryChange = e => {
@@ -351,50 +406,7 @@ elasticsearch:
               </button>
             </Tooltip>
 
-
-            <ModalStateManager
-              renderLauncher={({ setOpen }) => (
-                <Button ref={button} onClick={() => setOpen(true)}>
-                  <Information /> Help
-                </Button>
-              )}
-            >
-              {({ open, setOpen }) => (
-                <ComposedModal open={open} onClose={() => setOpen(false)}>
-                  <ModalHeader
-                    label="Account resources"
-                    title="Install an Ingress Controller"
-                  />
-                  <ModalBody>
-                    If you do not know what an ingress class is, and have not
-                    yet installed one, save the following as
-                    nginx_ingress_values.yaml
-                    <CodeSnippet type="multi">
-                      {`controller:
-  ingressClassResource:
-    default: true
-  replicaCount: 1
-  admissionWebhooks:
-    enabled: false
-  hostNetwork: true`}
-                      {deploymentType == "local" &&
-                        `
-  service:
-    type: NodePort`}
-                      {deploymentType == "remote" &&
-                        `
-  service:
-    type: LoadBalancer`}
-                    </CodeSnippet>
-                    And then run the following command to install the Nginx
-                    Ingress Controller:
-                    <CodeSnippet type="multi">
-                      {`helm install -f nginx_ingress_values.yaml nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.17.1`}
-                    </CodeSnippet>
-                  </ModalBody>
-                </ComposedModal>
-              )}
-            </ModalStateManager>
+            <LoadModalAfterMount display={display} deploymentType={deploymentType} button={button} />
 
             <br />
             <br />
