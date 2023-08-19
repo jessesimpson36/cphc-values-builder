@@ -11,4 +11,8 @@ jobs:
       - run: pwd
       - run: apt update -y && apt install -y docker.io
       - run: docker build -t git.jlscode.com/jesse/cphc-values-builder:latest .
+      - run: docker login git.jlscode.com -u $USERNAME -p $PASSWORD
+        env:
+          USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       - run: docker push git.jlscode.com/jesse/cphc-values-builder:latest .
