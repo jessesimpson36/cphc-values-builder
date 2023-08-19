@@ -220,7 +220,7 @@ identity:
   enabled: ${identityEnabled}`}
 {(ingressType == 'combined' && baseUrl != '' && identityEnabled) && `
   contextPath: "/identity"
-  fullURL: "${tlsEnabled}://${baseUrl}/identity`}
+  fullURL: "${tlsEnabled}://${baseUrl}/identity"`}
 {(ingressType == 'separated' && baseUrl != '' && identityEnabled) && `
   ingress:
     enabled: true
@@ -231,7 +231,7 @@ identity:
       enabled: true
       secretName: ${tlsSecret}`}
 {ingressType == 'separated' && baseUrl != '' && identityEnabled && `
-  fullURL: ${tlsEnabled}://identity.${baseUrl}
+  fullURL: "${tlsEnabled}://identity.${baseUrl}"
   keycloak:
     proxy: edge
     ingress:
