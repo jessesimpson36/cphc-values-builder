@@ -15,4 +15,4 @@ jobs:
         env:
           USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
           PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-      - run: docker push git.jlscode.com/jesse/cphc-values-builder:latest .
+      - run: docker push git.jlscode.com/jesse/cphc-values-builder:latest
