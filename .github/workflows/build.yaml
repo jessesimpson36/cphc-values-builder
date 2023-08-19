@@ -1,0 +1,14 @@
+name: Build cphc
+run-name: ${{ gitea.actor }} Build CPHC Values
+on: [push]
+
+jobs:
+  Build-Packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - run: pwd
+      - run: apt update -y && apt install -y docker.io
+      - run: docker build -t git.jlscode.com/jesse/cphc-values-builder:latest .
+      - run: docker push git.jlscode.com/jesse/cphc-values-builder:latest .

@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cphc-values-builder
+  namespace: cphc-values-builder
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: cphc-values.jlscode.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: cphc-values-builder
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - cphc-values.jlscode.com
+    secretName: cphc-values-jlscode-dev
+

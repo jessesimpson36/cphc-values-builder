@@ -1,0 +1,18 @@
+TODO:
+
+1. It's installed, what now?
+2. guide on debugging?
+3. Other common options that are maybe 1-to-1?
+4. Security hardening mode
+5. better styling
+6. save/reload configuration
+7. better/more tooltips
+8. edit values.yaml inside the webapp
+9. links to documentation
+10. local guide for dealing with ingress (change dns / /etc/hosts)
+11. existingSecrets help?
+12. help making secrets (tls, dockerhub...)
+13. validation
+14. explain to user that optimize and web modeler are enterprise only
+15. look at postgresql operator to see if they have features we want.
+
