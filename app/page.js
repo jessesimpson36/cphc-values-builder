@@ -93,6 +93,7 @@ export default function Home() {
   const [tasklistEnabled, handleToggleTasklist] = useState(true);
   const [operateEnabled, handleToggleOperate] = useState(true);
   const [optimizeEnabled, handleToggleOptimize] = useState(false);
+  const [connectorsEnabled, handleToggleConnectors] = useState(true);
   const [zeebeEnabled, handleToggleZeebe] = useState(true);
   const [modelerEnabled, handleToggleModeler] = useState(false);
   const [ingressClassName, handleIngressClass] = useState("");
@@ -135,6 +136,9 @@ export default function Home() {
     handleToggleOperate(e.target.checked);
   };
 
+  const toggleConnectors = e => {
+    handleToggleConnectors(e.target.checked);
+  };
 
   const toggleOptimize = e => {
     handleToggleOptimize(e.target.checked);
@@ -231,6 +235,9 @@ zeebe:
 {`
 operate:
   enabled: ${operateEnabled}`}
+{(operateEnabled && ingressType == 'combined') && `
+  contextPath: "/operate"`
+}
 {(ingressType == 'separated' && baseUrl != '' && operateEnabled) && `
   ingress:
     enabled: true
@@ -242,15 +249,19 @@ operate:
       secretName: ${tlsSecret}`}
 {`
 `}
-{ingressType == 'combined' && `
+{`
 connectors:
-  enabled: true
-  contextPath: '/connectors'`}
+  enabled: ${connectorsEnabled}`}
+{connectorsEnabled && ingressType == 'combined' && `
+  contextPath: "/connectors"`}
 {`
 `}
 {`
 tasklist:
   enabled: ${tasklistEnabled}`}
+{(tasklistEnabled && ingressType == 'combined') && `
+  contextPath: "/tasklist"`
+}
 {(ingressType == 'separated' && baseUrl != '' && tasklistEnabled) && `
   ingress:
     enabled: true
@@ -265,6 +276,9 @@ tasklist:
 {`
 optimize:
   enabled: ${optimizeEnabled}`}
+{(optimizeEnabled && ingressType == 'combined') && `
+  contextPath: "/optimize"`
+}
 {(ingressType == 'separated' && baseUrl != '' && optimizeEnabled) && `
   ingress:
     enabled: true
@@ -316,6 +330,10 @@ webModeler:
   restapi:
     mail:
       fromAddress: fake@fake.com`}
+{(modelerEnabled && ingressType == 'combined') && `
+  webapp:
+    contextPath: "/modeler"`
+}
 { ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
   webapp:
     host: modeler.${baseUrl}
@@ -392,6 +410,7 @@ elasticsearch:
             <br />
             <CheckboxGroup legendText="Enable Components" helperText="Enable Components">
               <Checkbox id="zeebeEnabled" labelText="Zeebe" defaultChecked={true} onChange={toggleZeebe} />
+              <Checkbox id="connectorsEnabled" labelText="Connectors" defaultChecked={true} onChange={toggleConnectors} />
               <Checkbox id="operateEnabled" labelText="Operate" defaultChecked={true} onChange={toggleOperate} />
               <Checkbox id="tasklistEnabled" labelText="Tasklist" defaultChecked={true} onChange={toggleTasklist} />
               <Checkbox id="optimizeEnabled" labelText="Optimize" defaultChecked={false} onChange={toggleOptimize} />
