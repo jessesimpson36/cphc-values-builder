@@ -212,9 +212,9 @@ global:`}
       operate:
         redirectUrl: "${tlsEnabled}://${baseUrl}/operate"
       optimize:
-        redirectUrl: "${tlsEnabled}://${baseUrl}/tasklist"
-      tasklist:
         redirectUrl: "${tlsEnabled}://${baseUrl}/optimize"
+      tasklist:
+        redirectUrl: "${tlsEnabled}://${baseUrl}/tasklist"
       webModeler:
         redirectUrl: "${tlsEnabled}://${baseUrl}/modeler"`}
 {`
@@ -240,6 +240,12 @@ operate:
     tls:
       enabled: true
       secretName: ${tlsSecret}`}
+{`
+`}
+{ingressType == 'combined' && `
+connectors:
+  enabled: true
+  contextPath: '/connectors'`}
 {`
 `}
 {`
@@ -301,22 +307,23 @@ identity:
 {`
 `}
 {`
+postgresql:
+  enabled: ${modelerEnabled}
+
 webModeler:
   enabled: ${modelerEnabled}`}
 {modelerEnabled && `
   restapi:
     mail:
       fromAddress: fake@fake.com`}
-{modelerEnabled && `
-  webapp:`}
 { ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
+  webapp:
     host: modeler.${baseUrl}
     tls:
       enabled: true
       secretName: ${tlsSecret}`}
-{ modelerEnabled && `
-  websockets:`}
 { ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
+  websockets:
     host: modeler.${baseUrl}
     tls:
       enabled: true
