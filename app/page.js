@@ -326,14 +326,13 @@ postgresql:
 
 webModeler:
   enabled: ${modelerEnabled}`}
+{(modelerEnabled && ingressType == 'combined') && `
+  contextPath: "/modeler"`
+}
 {modelerEnabled && `
   restapi:
     mail:
       fromAddress: fake@fake.com`}
-{(modelerEnabled && ingressType == 'combined') && `
-  webapp:
-    contextPath: "/modeler"`
-}
 { ingressType == 'separated' && baseUrl != '' && tlsSecret != '' && modelerEnabled && `
   webapp:
     host: modeler.${baseUrl}
