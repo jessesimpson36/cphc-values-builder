@@ -295,7 +295,9 @@ identity:
   enabled: ${identityEnabled}`}
 {(ingressType == 'combined' && baseUrl != '' && identityEnabled) && `
   contextPath: "/identity"
-  fullURL: "${tlsEnabled}://${baseUrl}/identity"`}
+  fullURL: "${tlsEnabled}://${baseUrl}/identity"
+  keycloak:
+    proxy: edge`}
 {(ingressType == 'separated' && baseUrl != '' && identityEnabled) && `
   ingress:
     enabled: true
