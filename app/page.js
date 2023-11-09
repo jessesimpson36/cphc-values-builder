@@ -365,7 +365,8 @@ zeebe-gateway:`}
 {deploymentType == 'local' && `
 elasticsearch:
   clusterHealthCheckParams: "wait_for_status=yellow&timeout=1s"
-  replicas: 1
+  master:
+    replicaCount: 1
   antiAffinity: "soft"`}
             </CodeSnippet>
           </div>
