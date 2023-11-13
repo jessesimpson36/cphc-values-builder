@@ -16,6 +16,8 @@ jobs:
 
       - run: apt install -y docker.io
 
+      - run: sleep 2d
+
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3
           
