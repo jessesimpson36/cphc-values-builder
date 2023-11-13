@@ -3,13 +3,20 @@ run-name: ${{ gitea.actor }} Build CPHC Values
 on: [push]
 
 env:
-  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  DOCKER_HOST: tcp://localhost:2376
+  DOCKER_CERT_PATH: /certs/client
+  DOCKER_TLS_VERIFY: "1"
 
 jobs:
   Build-Packages:
     runs-on: ubuntu-latest
     steps:
       - uses: https://github.com/actions/checkout@v4
+
+      - run: apt update
+
+      - run: apt install -y docker.io
+
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3
           
