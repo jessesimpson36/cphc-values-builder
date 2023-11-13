@@ -3,8 +3,9 @@ run-name: ${{ gitea.actor }} Build CPHC Values
 on: [push]
 
 env:
-  DOCKER_HOST: tcp://act-runner:2376
-  DOCKER_TLS_VERIFY: "0"
+  DOCKER_HOST: tcp://${{ env.HOSTNAME }}:2376
+  DOCKER_CERT_PATH: /certs/client
+  DOCKER_TLS_VERIFY: "1"
 
 jobs:
   Build-Packages:
@@ -17,6 +18,8 @@ jobs:
       - run: apt install -y docker.io
 
       - run: sleep 2d
+
+      - run: docker cp $(docker container ls -q | tail -n 1 | awk '{print $1}')
 
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3
