@@ -2,6 +2,9 @@ name: Build cphc
 run-name: ${{ gitea.actor }} Build CPHC Values
 on: [push]
 
+env:
+  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 jobs:
   Build-Packages:
     runs-on: ubuntu-latest
