@@ -16,8 +16,6 @@ jobs:
 
       - run: apt install -y docker.io
 
-      - run: docker-machine regenerate-certs dev
-
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3
           
