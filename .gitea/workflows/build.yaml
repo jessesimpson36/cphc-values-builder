@@ -4,7 +4,7 @@ on: [push]
 
 env:
   DOCKER_HOST: tcp://act-runner:2376
-  DOCKER_TLS_VERIFY: "1"
+  DOCKER_TLS_VERIFY: "0"
 
 jobs:
   Build-Packages:
