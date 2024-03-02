@@ -1,5 +1,5 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Keeps cphc builder up to date",
   "dependencyDashboard": true,
   "packageRules": [
