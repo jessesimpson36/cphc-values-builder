@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "description": "Keeps cphc builder up to date",
+  "dependencyDashboard": true,
+  "packageRules": [
+    {
+      "matchDepNames": ["ghcr.io/renovatebot/renovate"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+    },
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": ["\\.yaml$"],
+      "datasourceTemplate":"github-releases",
+      "matchStrings": [
+        "# renovate: datasource=github-releases depName=(?<depName>.+?)( versioning=(?<versioning>.+?))?( extractVersion=(?<extractVersion>.+?))?\\s+?version: (?<currentValue>\\S+)"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}",
+      "extractVersionTemplate": "{{#if extractVersion}}{{{extractVersion}}}{{else}}^v?(?<version>.+)${{/if}}",
+    },
+    {
+      "fileMatch": ["\\.yaml$"],
+      "datasourceTemplate":"gitea-releases",
+      "matchStrings": [
+        "# renovate: datasource=gitea-releases depName=(?<depName>.+?)( versioning=(?<versioning>.+?))?( extractVersion=(?<extractVersion>.+?))?\\s+?version: (?<currentValue>\\S+)"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}",
+      "extractVersionTemplate": "{{#if extractVersion}}{{{extractVersion}}}{{else}}^v?(?<version>.+)${{/if}}",
+    },
+  ],
+}
