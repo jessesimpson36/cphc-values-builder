@@ -9,7 +9,7 @@ on:
 jobs:
   renovate:
     runs-on: ubuntu-latest
-    container: ghcr.io/renovatebot/renovate:37.326.3
+    container: ghcr.io/renovatebot/renovate:37.329.0
     steps:
       - uses: actions/checkout@v4
         with:
