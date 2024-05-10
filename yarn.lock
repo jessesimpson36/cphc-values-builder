@@ -57,12 +57,12 @@
     "@ibm/telemetry-js" "^1.5.0"
     prop-types "^15.7.2"
 
-"@carbon/layout@^11.18.0", "@carbon/layout@^11.21.0":
-  version "11.21.0"
-  resolved "https://registry.npmjs.org/@carbon/layout/-/layout-11.21.0.tgz"
-  integrity sha512-R0EEMIzdsWzF2rphzTwDJ6ywnSvDxvZwffBKn7+7bBcTWu0cp/XFeG1UzRL0LoZ25Ixv/aEQYCkoDebgUMfrfQ==
+"@carbon/layout@^11.21.0", "@carbon/layout@^11.22.0":
+  version "11.22.0"
+  resolved "https://registry.npmjs.org/@carbon/layout/-/layout-11.22.0.tgz"
+  integrity sha512-G9HUJhGW+hNfUKyCLUZior5PDz808prB2Xr3vWF/rqNwLIDKhva/wCXBW2Xl0LavzonuibaCavcSYJGDkpDKhw==
   dependencies:
-    "@ibm/telemetry-js" "^1.2.1"
+    "@ibm/telemetry-js" "^1.5.0"
 
 "@carbon/motion@^11.17.0":
   version "11.17.0"
