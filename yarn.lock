@@ -43,12 +43,12 @@
 
 "@carbon/icon-helpers@^10.53.0":
   version "10.53.0"
-  resolved "https://registry.yarnpkg.com/@carbon/icon-helpers/-/icon-helpers-10.53.0.tgz#f9c2da6b7d609b226c145a3ceba522906a3063fa"
+  resolved "https://registry.npmjs.org/@carbon/icon-helpers/-/icon-helpers-10.53.0.tgz"
   integrity sha512-5yVbIH3/cYSJBgJ+04l2/zBikxm7IA/CV2MTt04Op3ZwOcSkVbmRNNAWslkamTE/DOHLCTj76GK0Jh6vgXF/UQ==
   dependencies:
     "@ibm/telemetry-js" "^1.5.0"
 
-"@carbon/icons-react@^11.49.0", "@carbon/icons-react@^11.50.0":
+"@carbon/icons-react@^11.24.0", "@carbon/icons-react@^11.49.0":
   version "11.50.0"
   resolved "https://registry.npmjs.org/@carbon/icons-react/-/icons-react-11.50.0.tgz"
   integrity sha512-CflBww8tmCbZTck/NhsykOcoUdhskzY1RL3EWjZPx7ixS9wqUblZMDaPFmF1AyHS1ykMdqhvOLtlb+HBLQdKow==
@@ -57,10 +57,10 @@
     "@ibm/telemetry-js" "^1.5.0"
     prop-types "^15.7.2"
 
-"@carbon/layout@^11.18.0", "@carbon/layout@^11.26.0":
-  version "11.26.0"
-  resolved "https://registry.npmjs.org/@carbon/layout/-/layout-11.26.0.tgz"
-  integrity sha512-PYA2c9y9OaVwuxnTo9ez2FQfKZKejIvbpRdCedB4Z61JAfv03e7ZKU55AdKUstdElanL4HS/drEE/H71siPoiw==
+"@carbon/layout@^11.26.0", "@carbon/layout@^11.27.0":
+  version "11.27.0"
+  resolved "https://registry.npmjs.org/@carbon/layout/-/layout-11.27.0.tgz"
+  integrity sha512-o2++xUe2Wfg1nzneLl8ucbep9ObUE6vEgwlifVdOpvCti6zlsRjti5ojtYpx3v0yW2Qh7TJH8OYN7CyZDLeZUw==
   dependencies:
     "@ibm/telemetry-js" "^1.5.0"
 
@@ -2145,7 +2145,7 @@ jiti@^1.21.0:
 
 "js-tokens@^3.0.0 || ^4.0.0":
   version "4.0.0"
-  resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
+  resolved "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
 
 js-yaml@^4.1.0:
@@ -2384,7 +2384,7 @@ npm-run-path@^5.1.0:
 
 object-assign@^4.0.1, object-assign@^4.1.1:
   version "4.1.1"
-  resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
+  resolved "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz"
   integrity sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==
 
 object-hash@^3.0.0:
@@ -2706,7 +2706,7 @@ react-fast-compare@^3.2.2:
 
 react-is@^16.13.1:
   version "16.13.1"
-  resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
+  resolved "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
 react-is@^18.2.0:
