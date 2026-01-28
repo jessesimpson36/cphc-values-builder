@@ -193,19 +193,19 @@
     "@carbon/layout" "^11.46.0"
     "@ibm/telemetry-js" "^1.5.0"
 
-"@carbon/icon-helpers@^10.70.0":
-  version "10.70.0"
-  resolved "https://registry.yarnpkg.com/@carbon/icon-helpers/-/icon-helpers-10.70.0.tgz#77d94fc8d731a058b453baa71bf569a01df30fed"
-  integrity sha512-c3w4CMvdentyisIG8WvJf4W5bU39JElrMJvS57DvXUKdWayJqwG9698+ah3PwsNw815u270koIsDv69N6Gsxug==
+"@carbon/icon-helpers@^10.71.0":
+  version "10.71.0"
+  resolved "https://registry.yarnpkg.com/@carbon/icon-helpers/-/icon-helpers-10.71.0.tgz#575f973cc0e6c27856481e0bfd381ee25077b7c2"
+  integrity sha512-T6KcxkNIa609jPC+8A7u5husSY+mH60lCNNa3ivcOyuREoVYHwnieM7GIECigF/oaGaF5eBzrxYFx2+8mLRk1A==
   dependencies:
     "@ibm/telemetry-js" "^1.5.0"
 
 "@carbon/icons-react@^11.24.0", "@carbon/icons-react@^11.73.0":
-  version "11.73.0"
-  resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.73.0.tgz#2787ab7ddb7169472f09bf8c69eaa184eec2d8df"
-  integrity sha512-nAgyfcEKzQUt+68+mvz0gQQtcn7jpRxiUsvG/uZ/MIJZoLHhtRt5u5pymU9JLNnQFJWwyIUhraDeLip7MpHjIQ==
+  version "11.74.0"
+  resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.74.0.tgz#0dac796063b50b9b8e53af4710a75a7e5fbf815c"
+  integrity sha512-tP/ZwM3e86zDm/8mup1NoObdaBl2xqZlroWP/Z1PQ9bCYOOFelR6r34aObWiDBJVpKb5YwwZWYUrl+/98fmDRQ==
   dependencies:
-    "@carbon/icon-helpers" "^10.70.0"
+    "@carbon/icon-helpers" "^10.71.0"
     "@ibm/telemetry-js" "^1.5.0"
     prop-types "^15.8.1"
 
@@ -687,7 +687,12 @@
   dependencies:
     "@ibm/telemetry-js" "^1.5.1"
 
-"@ibm/telemetry-js@^1.5.0", "@ibm/telemetry-js@^1.5.1", "@ibm/telemetry-js@^1.6.1":
+"@ibm/telemetry-js@^1.5.0":
+  version "1.11.0"
+  resolved "https://registry.yarnpkg.com/@ibm/telemetry-js/-/telemetry-js-1.11.0.tgz#3270e7b7ec8f30eb940e1d28448315ea9287062e"
+  integrity sha512-RO/9j+URJnSfseWg9ZkEX9p+a3Ousd33DBU7rOafoZB08RqdzxFVYJ2/iM50dkBuD0o7WX7GYt1sLbNgCoE+pA==
+
+"@ibm/telemetry-js@^1.5.1", "@ibm/telemetry-js@^1.6.1":
   version "1.10.2"
   resolved "https://registry.yarnpkg.com/@ibm/telemetry-js/-/telemetry-js-1.10.2.tgz#6d4bfb5cce275b8a061c64199bcc9f1ad23477b2"
   integrity sha512-F8+/NNUwtm8BuFz18O9KPvIFTFDo8GUSoyhPxPjEpk7nEyEzWGfhIiEPhL00B2NdHRLDSljh3AiCfSnL/tutiQ==
