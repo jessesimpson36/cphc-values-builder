@@ -1,34 +1,56 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Camunda 8 Configuration Wizard
 
-## Getting Started
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)]()
+[![React](https://img.shields.io/badge/React-19.2.0-blue.svg)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.2.4-646CFF.svg)](https://vitejs.dev/)
 
-First, run the development server:
+An interactive web-based wizard for generating production-ready YAML configuration files for Camunda 8 Self-Managed deployments.
 
+## Table of Contents
+
+- [About](#about)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+
+
+
+## About
+
+The Camunda 8 Configuration Wizard simplifies the process of configuring Camunda 8 Self-Managed installations by providing an intuitive step-by-step interface.
+
+### Why This Tool?
+
+- **Reduces Configuration Errors**: Guided form inputs with validation prevent common YAML syntax mistakes
+- **Saves Time**: No need to reference documentation repeatedly or search for configuration examples
+- **Dynamic Configuration**: Only shows relevant configuration steps based on selected products
+
+## Prerequisites
+
+- **Node.js**: v16.0.0 or higher
+- **npm**: v7.0.0 or higher (or yarn v1.22.0+)
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+
+## Installation
+
+### Clone the Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+git clone https://github.com/camunda-community-hub/cphc-values-builder
+cd camunda-config-wizard
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Install Dependencies
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Using npm:
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+### Start Development Server
 
-## Learn More
+Using npm:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The application will start at `http://localhost:5173`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
