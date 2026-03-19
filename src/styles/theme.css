@@ -1,0 +1,97 @@
+/* ─── Theme Variables ──────────────────────────────────────────────────────── */
+/*
+ * Usage: set data-theme="dark" | "light" | "camunda" on the <html> element.
+ * Theme switching is handled in App.jsx via localStorage persistence.
+ *
+ * Variable groups:
+ *
+ * Layout:    --bg, --header-bg, --header-border
+ * Cards:     --card-bg, --card-border
+ * Inputs:    --input-bg, --input-border, --input-focus
+ * Text:      --text, --text-muted, --text-dim, --text-label
+ * Accent:    --accent, --accent-hover, --accent-glow, --accent-pink
+ * States:    --success, --error, --error-bg, --error-text
+ * YAML:      --yaml-bg, --yaml-text
+ * Selection: --selected-bg, --unselected-bg
+ */
+
+[data-theme="dark"] {
+  --bg:               #0a0a1a;
+  --header-bg:        #0d0d22;
+  --header-border:    #1a1a3a;
+  --card-bg:          #12122a;
+  --card-border:      #2a2a4a;
+  --input-bg:         #1a1a2e;
+  --input-border:     #2a2a4a;
+  --input-focus:      #6c63ff;
+  --text:             #e0e0ff;
+  --text-muted:       #8888bb;
+  --text-dim:         #4a4a6a;
+  --text-label:       #c0c0ff;
+  --accent:           #6c63ff;
+  --accent-hover:     #7c73ff;
+  --accent-glow:      #6c63ff33;
+  --accent-pink:      #ff6584;
+  --success:          #28c840;
+  --error:            #ff4466;
+  --error-bg:         #1a0a12;
+  --error-text:       #ff8899;
+  --yaml-bg:          #0d0d1f;
+  --yaml-text:        #a0ffa0;
+  --selected-bg:      #1a1a3a;
+  --unselected-bg:    #0f0f25;
+}
+
+[data-theme="light"] {
+  --bg:               #f4f4f8;
+  --header-bg:        #ffffff;
+  --header-border:    #e0e0ec;
+  --card-bg:          #ffffff;
+  --card-border:      #dcdcec;
+  --input-bg:         #f8f8fc;
+  --input-border:     #d0d0e0;
+  --input-focus:      #5b54e8;
+  --text:             #1a1a2e;
+  --text-muted:       #6060a0;
+  --text-dim:         #a0a0c0;
+  --text-label:       #2a2a4a;
+  --accent:           #5b54e8;
+  --accent-hover:     #4a44d0;
+  --accent-glow:      #5b54e820;
+  --accent-pink:      #e84a6a;
+  --success:          #18a832;
+  --error:            #e02040;
+  --error-bg:         #fff0f3;
+  --error-text:       #c01030;
+  --yaml-bg:          #f0f8f0;
+  --yaml-text:        #186020;
+  --selected-bg:      #eeeeff;
+  --unselected-bg:    #fafaff;
+}
+
+[data-theme="camunda"] {
+  --bg:               #0d1117;
+  --header-bg:        #fc5d0a;
+  --header-border:    #e04d00;
+  --card-bg:          #161b22;
+  --card-border:      rgba(255, 255, 255, 0.27);
+  --input-bg:         #0d1117;
+  --input-border:     rgba(252, 93, 10, 0.27);
+  --input-focus:      #fc5d0a;
+  --text:             #e6edf3;
+  --text-muted:       #f7f7f7;
+  --text-dim:         #a1a0b9;
+  --text-label:       #e6edf3;
+  --accent:           #fc5d0a;
+  --accent-hover:     #ff7a30;
+  --accent-glow:      rgba(252, 93, 10, 0.2);
+  --accent-pink:      #ff9a6a;
+  --success:          #3fb950;
+  --error:            #f85149;
+  --error-bg:         #1a0e0e;
+  --error-text:       #ff7b72;
+  --yaml-bg:          #0d1117;
+  --yaml-text:        #3fb950;
+  --selected-bg:      #1c2128;
+  --unselected-bg:    #0d1117;
+}
