@@ -207,10 +207,19 @@
   dependencies:
     "@ibm/telemetry-js" "^1.5.0"
 
-"@carbon/icons-react@^11.24.0", "@carbon/icons-react@^11.77.0":
+"@carbon/icons-react@^11.24.0":
   version "11.77.0"
   resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.77.0.tgz#ba8cdc8e64f3f379b6a04d0e63ed87f0de18c4af"
   integrity sha512-dgCX1WuyL5AJpyeyDArI+wrvVNDbgHZpY96nIhcdL2sS/YsOfFZ5WNQ+UxVaJ9KmK/7x1pFx3CyjjDiQ5sTiyg==
+  dependencies:
+    "@carbon/icon-helpers" "^10.74.0"
+    "@ibm/telemetry-js" "^1.5.0"
+    prop-types "^15.8.1"
+
+"@carbon/icons-react@^11.77.1":
+  version "11.77.1"
+  resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.77.1.tgz#455646c30c6df7fca1bd9cf1cbc2c92e5e5e6c33"
+  integrity sha512-7eLDx1Xu9Y0/OoWA94b5MjGr85iXm88slNIqmd6mB2yWRFzS8xDoZwlqc8bmlqgcPyGjHj6GJaa3XirOeOwfiQ==
   dependencies:
     "@carbon/icon-helpers" "^10.74.0"
     "@ibm/telemetry-js" "^1.5.0"
@@ -238,13 +247,13 @@
     "@ibm/telemetry-js" "^1.5.0"
 
 "@carbon/react@^1.35.0", "@carbon/react@^1.67.0":
-  version "1.104.0"
-  resolved "https://registry.yarnpkg.com/@carbon/react/-/react-1.104.0.tgz#ce4b54949570f8818bad6e7a422b39f8e6a943df"
-  integrity sha512-IID5Lml0qkg7LCNzUMgSdUAwOmSEpFeRL4nj6LjW7Y6nSRy/OfPn9nDfvc4j40+ITZxTRJ6aV5u6jHg/aIOylA==
+  version "1.104.1"
+  resolved "https://registry.yarnpkg.com/@carbon/react/-/react-1.104.1.tgz#65b7c067a9899d899a258e6b1df26af88872d795"
+  integrity sha512-cOnDjAjGMbqK9GT5by4Nf5InDN+RxS0GI7ilSD0zsCczjVo00HcX3F4Ek1AI1uN6AkcrVIIzbJBrWxfqzaLHBA==
   dependencies:
     "@babel/runtime" "^7.27.3"
     "@carbon/feature-flags" "^1.2.0"
-    "@carbon/icons-react" "^11.77.0"
+    "@carbon/icons-react" "^11.77.1"
     "@carbon/layout" "^11.50.0"
     "@carbon/styles" "^1.103.0"
     "@carbon/utilities" "^0.18.0"
@@ -1083,9 +1092,9 @@
     tslib "^2.8.0"
 
 "@swc/helpers@^0.5.0":
-  version "0.5.19"
-  resolved "https://registry.yarnpkg.com/@swc/helpers/-/helpers-0.5.19.tgz#9a8c8a0bdaecfdfb9b8ae5421c0c8e09246dfee9"
-  integrity sha512-QamiFeIK3txNjgUTNppE6MiG3p7TdninpZu0E0PbqVh1a9FNLT2FRhisaa4NcaX52XVhA5l7Pk58Ft7Sqi/2sA==
+  version "0.5.20"
+  resolved "https://registry.yarnpkg.com/@swc/helpers/-/helpers-0.5.20.tgz#d1d0f1e18ff6592c96a4931b4031298619129585"
+  integrity sha512-2egEBHUMasdypIzrprsu8g+OEVd7Vp2MM3a2eVlM/cyFYto0nGz5BX5BTgh/ShZZI9ed+ozEq+Ngt+rgmUs8tw==
   dependencies:
     tslib "^2.8.0"
 
