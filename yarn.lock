@@ -217,9 +217,9 @@
     prop-types "^15.8.1"
 
 "@carbon/layout@^11.18.0", "@carbon/layout@^11.43.0", "@carbon/layout@^11.50.0":
-  version "11.50.0"
-  resolved "https://registry.yarnpkg.com/@carbon/layout/-/layout-11.50.0.tgz#a09b0bbfbf783b47978b0a15f5fb57b7d21cd200"
-  integrity sha512-8+ADVHQV/gUH7KDaYxcX9+Hi3fcIcOXDTXQkwEa70N0fjUwtGOWZQwoBHJpNhF2gCMLOh0YGY2kq6p82nySbrQ==
+  version "11.51.0"
+  resolved "https://registry.yarnpkg.com/@carbon/layout/-/layout-11.51.0.tgz#b4e4e12955ae6a546dc8b68925887bd5cfcf6782"
+  integrity sha512-V+D6jOZMXlYMDdppHTMvmQB46CnAKwA8OjDt7EX9lNbRbaig/fLfqbtTWM4rgy7VjyOqsDOBMVzyffiiz5HPzQ==
   dependencies:
     "@ibm/telemetry-js" "^1.5.0"
 
