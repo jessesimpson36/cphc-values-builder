@@ -208,9 +208,9 @@
     "@ibm/telemetry-js" "^1.5.0"
 
 "@carbon/icons-react@^11.24.0", "@carbon/icons-react@^11.79.0":
-  version "11.79.0"
-  resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.79.0.tgz#a4b31d95f98a82389502e63df005c82dbcdc0444"
-  integrity sha512-560qV1R5xkaZtL6XbGeABoeXTL46CnJi01aeR6/XYW0yRxhHw7yLkdcahOrCBDJClg3X9n+2Xs/XddW9KorB9Q==
+  version "11.80.0"
+  resolved "https://registry.yarnpkg.com/@carbon/icons-react/-/icons-react-11.80.0.tgz#f225333092ab4fafa1d830ca297c1495b45d16ff"
+  integrity sha512-n1h35uab3htCOZnc7CVlVRYGQfu1Y0ZBzE6WXUoRcwve+Psh+bRS7WPaO+sdXN+8WnGMOkdNVO/G6TGDaHjWbA==
   dependencies:
     "@carbon/icon-helpers" "^10.75.0"
     "@ibm/telemetry-js" "^1.5.0"
