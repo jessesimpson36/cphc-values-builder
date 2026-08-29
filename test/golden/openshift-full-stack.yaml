@@ -1,0 +1,99 @@
+orchestration:
+  enabled: true
+  ingress:
+    grpc:
+      enabled: false
+  env:
+    - name: ZEEBE_BROKER_CLUSTER_PARTITIONSCOUNT
+      value: '3'
+optimize:
+  enabled: true
+  env:
+    - name: CAMUNDA_OPTIMIZE_ENTERPRISE
+      value: 'false'
+identity:
+  enabled: true
+  externalDatabase:
+    enabled: true
+    host: identity-db.example.internal
+    port: 5432
+    username: identity
+    secret:
+      inlineSecret: identity-secret
+    database: identity
+  env:
+    - name: IDENTITY_LOG_LEVEL
+      value: DEBUG
+identityPostgresql:
+  enabled: false
+  global:
+    compatibility:
+      openshift:
+        adaptSecurityContext: force
+webModeler:
+  enabled: true
+  restapi:
+    externalDatabase:
+      host: modeler-db.example.internal
+      port: 5432
+      user: modeler
+      secret:
+        inlineSecret: modeler-secret
+      database: modeler
+    mail:
+      fromAddress: camunda@example.com
+      fromName: Camunda 8
+      smtpHost: smtp.example.internal
+      smtpPort: 587
+      smtpUser: camunda
+      smtpTlsEnabled: true
+      secret:
+        inlineSecret: smtp-secret
+webModelerPostgresql:
+  enabled: false
+  global:
+    compatibility:
+      openshift:
+        adaptSecurityContext: force
+connectors:
+  enabled: true
+  env:
+    - name: CAMUNDA_CONNECTOR_POLLING_ENABLED
+      value: 'true'
+console:
+  enabled: true
+  env:
+    - name: CONSOLE_LOG_LEVEL
+      value: debug
+global:
+  compatibility:
+    openshift:
+      adaptSecurityContext: force
+  elasticsearch:
+    enabled: true
+    external: true
+    auth:
+      username: camunda
+      secret:
+        inlineSecret: es-secret
+    url:
+      protocol: https
+      host: elasticsearch.example.internal
+      port: 9200
+    tls:
+      enabled: true
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+identityKeycloak:
+  global:
+    compatibility:
+      openshift:
+        adaptSecurityContext: force
+elasticsearch:
+  global:
+    compatibility:
+      openshift:
+        adaptSecurityContext: force
+  enabled: false

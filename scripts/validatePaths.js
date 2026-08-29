@@ -1,12 +1,23 @@
 /**
- * validatePaths.js — displayConfig Path Validator
+ * validatePaths.js — Helm path validator
  *
- * Checks that every field path defined in displayConfig.js exists in
- * schema.json. Catches typos and stale paths before they reach users.
+ * Checks that every path this tool can emit actually exists in the chart.
  *
- * A typo in a path won't crash the tool — it will silently write the
- * wrong key in the YAML output, causing a confusing helm install failure.
- * This script catches that at development time instead.
+ * A wrong path does not crash anything — it silently writes a key the chart
+ * ignores, and the user finds out when their deployment behaves nothing like
+ * they configured it. This script turns that into a build failure.
+ *
+ * Two sources of paths are checked:
+ *
+ *   1. displayConfig.js — every field.path the UI can write.
+ *   2. transform.js     — every leaf path actually produced by transforming the
+ *                         scenarios in test/scenarios.js. This covers the flags
+ *                         hardcoded in applyProductFlags (product enablement,
+ *                         bundled database toggles, OpenShift security context),
+ *                         which no amount of reading displayConfig would reveal.
+ *
+ * The module is imported and evaluated rather than pattern-matched, so paths
+ * built at runtime (the secretFields helper) are covered too.
  *
  * Run with:  npm run validate
  *
@@ -18,6 +29,9 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { displayConfig } from '../src/displayConfig.js'
+import { transformAnswers } from '../src/transform.js'
+import { scenarios } from '../test/scenarios.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -32,50 +46,66 @@ if (!fs.existsSync(schemaPath)) {
 }
 
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'))
-const validPaths = new Set(schema.map(field => field.path))
+const validPaths = new Set(schema.map((field) => field.path))
 
 process.stdout.write(`[validate] schema.json loaded — ${validPaths.size} valid paths\n`)
 
-// ─── Load displayConfig.js ────────────────────────────────────────────────────
-
-const configPath = path.join(__dirname, '../src/displayConfig.js')
-
-if (!fs.existsSync(configPath)) {
-  console.error('[validate] displayConfig.js not found.')
-  process.exit(1)
-}
-
-const configText = fs.readFileSync(configPath, 'utf8')
-
-// ─── Extract paths from displayConfig.js ─────────────────────────────────────
+// ─── Source 1: paths declared in displayConfig.js ────────────────────────────
 //
-// displayConfig.js is a JS file not JSON so we can't parse it directly.
-// Instead we use a regex to extract all path: '...' and path: "..." values.
-// path: null entries are intentionally skipped — those are UI-only fields
-// that don't map to any Helm value.
+// path: null marks a UI-only field that maps to no Helm value — skipped.
 
-const pathRegex = /path:\s*['"]([^'"]+)['"]/g
-const foundPaths = []
-let match
+const configPaths = new Map()
 
-while ((match = pathRegex.exec(configText)) !== null) {
-  foundPaths.push(match[1])
+for (const section of displayConfig.sections) {
+  for (const field of section.fields) {
+    if (!field.path) continue
+    configPaths.set(field.path, `displayConfig ${section.id} → ${field.id}`)
+  }
 }
 
-process.stdout.write(`[validate] displayConfig.js scanned — ${foundPaths.length} paths found\n`)
+process.stdout.write(`[validate] displayConfig.js evaluated — ${configPaths.size} paths declared\n`)
+
+// ─── Source 2: paths actually emitted by transform.js ────────────────────────
+
+function leafPaths(obj, parentPath = '') {
+  const result = []
+  for (const [key, value] of Object.entries(obj)) {
+    const currentPath = parentPath ? `${parentPath}.${key}` : key
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result.push(...leafPaths(value, currentPath))
+    } else {
+      result.push(currentPath)
+    }
+  }
+  return result
+}
+
+const emittedPaths = new Map()
+
+for (const scenario of scenarios) {
+  for (const emitted of leafPaths(transformAnswers(scenario.answers))) {
+    if (!emittedPaths.has(emitted)) {
+      emittedPaths.set(emitted, `transform output of scenario "${scenario.name}"`)
+    }
+  }
+}
+
+process.stdout.write(`[validate] ${scenarios.length} scenario(s) transformed — ${emittedPaths.size} distinct paths emitted\n`)
 
 // ─── Validate ─────────────────────────────────────────────────────────────────
 
-const invalidPaths = foundPaths.filter(p => !validPaths.has(p))
+const allPaths = new Map([...configPaths, ...emittedPaths])
+const invalid = [...allPaths].filter(([p]) => !validPaths.has(p))
 
-if (invalidPaths.length === 0) {
-  process.stdout.write(`[validate] ✓ All paths are valid\n`)
+if (invalid.length === 0) {
+  process.stdout.write(`[validate] ✓ All ${allPaths.size} paths are valid\n`)
   process.exit(0)
-} else {
-  process.stdout.write(`[validate] ✗ ${invalidPaths.length} invalid path(s) found:\n`)
-  invalidPaths.forEach(p => {
-    process.stdout.write(`           - ${p}\n`)
-  })
-  process.stdout.write(`[validate] Check displayConfig.js and compare against schema.json\n`)
-  process.exit(1)
 }
+
+process.stdout.write(`[validate] ✗ ${invalid.length} invalid path(s) found:\n`)
+for (const [p, origin] of invalid) {
+  process.stdout.write(`           - ${p}\n`)
+  process.stdout.write(`             from ${origin}\n`)
+}
+process.stdout.write(`[validate] Compare against src/schema.json — the chart may have renamed or removed these.\n`)
+process.exit(1)

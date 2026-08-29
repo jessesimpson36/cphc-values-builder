@@ -1,0 +1,117 @@
+orchestration:
+  enabled: true
+  clusterSize: '6'
+  partitionCount: '17'
+  replicationFactor: '3'
+  pvcSize: 77Gi
+  resources:
+    requests:
+      cpu: 8000m
+      memory: 24Gi
+    limits:
+      cpu: 12000m
+      memory: 36Gi
+  security:
+    authentication:
+      oidc:
+        type: KEYCLOAK
+        issuer: https://keycloak.example.com/realms/camunda
+        clientId: orchestration
+        secret:
+          inlineSecret: oidc-secret
+  pvcStorageClassName: premium-rwo
+  ingress:
+    grpc:
+      enabled: true
+      className: nginx
+      host: zeebe.example.com
+      tls:
+        enabled: true
+        secretName: zeebe-tls
+  env:
+    - name: CAMUNDA_LOG_LEVEL
+      value: INFO
+optimize:
+  enabled: true
+identity:
+  enabled: true
+  externalDatabase:
+    enabled: true
+    host: identity-db.example.internal
+    port: 5432
+    username: identity
+    secret:
+      inlineSecret: identity-secret
+    database: identity
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: true
+  restapi:
+    externalDatabase:
+      host: modeler-db.example.internal
+      port: 5432
+      user: modeler
+      secret:
+        inlineSecret: modeler-secret
+      database: modeler
+    mail:
+      fromAddress: camunda@example.com
+      fromName: Camunda 8
+      smtpHost: smtp.example.internal
+      smtpPort: 587
+      smtpUser: camunda
+      smtpTlsEnabled: true
+      secret:
+        inlineSecret: smtp-secret
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: true
+console:
+  enabled: true
+global:
+  elasticsearch:
+    enabled: true
+    external: true
+    auth:
+      username: camunda
+      secret:
+        inlineSecret: es-secret
+    url:
+      protocol: https
+      host: elasticsearch.example.internal
+      port: 9200
+    tls:
+      enabled: true
+  opensearch:
+    enabled: false
+  documentStore:
+    type:
+      inmemory:
+        enabled: false
+      aws:
+        enabled: true
+        bucket: camunda-documents
+        region: eu-central-1
+        irsa:
+          enabled: true
+      gcp:
+        enabled: false
+    activeStoreId: AWS
+  license:
+    secret:
+      existingSecret: camunda-license
+      existingSecretKey: license-key
+  security:
+    authentication:
+      method: oidc
+  ingress:
+    enabled: true
+    className: nginx
+    host: camunda.example.com
+    tls:
+      enabled: true
+      secretName: camunda-tls
+elasticsearch:
+  enabled: false

@@ -1,0 +1,36 @@
+orchestration:
+  enabled: false
+optimize:
+  enabled: false
+identity:
+  enabled: true
+  externalDatabase:
+    enabled: true
+    host: identity-db.example.internal
+    port: 5432
+    username: identity
+    secret:
+      inlineSecret: identity-secret
+    database: identity
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: false
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: true
+  env:
+    - name: CAMUNDA_CONNECTOR_POLLING_ENABLED
+      value: 'true'
+console:
+  enabled: true
+global:
+  elasticsearch:
+    enabled: false
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+elasticsearch:
+  enabled: false

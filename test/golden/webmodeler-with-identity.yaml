@@ -1,0 +1,57 @@
+orchestration:
+  enabled: false
+optimize:
+  enabled: false
+identity:
+  enabled: true
+  externalDatabase:
+    enabled: true
+    host: identity-db.example.internal
+    port: 5432
+    username: identity
+    secret:
+      inlineSecret: identity-secret
+    database: identity
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: true
+  restapi:
+    externalDatabase:
+      host: modeler-db.example.internal
+      port: 5432
+      user: modeler
+      secret:
+        inlineSecret: modeler-secret
+      database: modeler
+    mail:
+      fromAddress: camunda@example.com
+      fromName: Camunda 8
+      smtpHost: smtp.example.internal
+      smtpPort: 587
+      smtpUser: camunda
+      smtpTlsEnabled: true
+      secret:
+        inlineSecret: smtp-secret
+    env:
+      - name: LOGGING_LEVEL_IO_CAMUNDA
+        value: DEBUG
+  websockets:
+    env:
+      - name: LOG_LEVEL
+        value: debug
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: false
+global:
+  elasticsearch:
+    enabled: false
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+elasticsearch:
+  enabled: false
