@@ -1,11 +1,27 @@
 name: Build cphc
 run-name: ${{ github.actor }} Build CPHC Values
-on: [push]
+
+on:
+  push:
+  pull_request:
 
 jobs:
-  Build-Packages:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - run: docker build .
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate displayConfig paths against schema.json
+        run: npm run validate
+
+      - run: npm run build

@@ -1,0 +1,682 @@
+/* ─── Layout ───────────────────────────────────────────────────────────────── */
+
+.app-container {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.25s ease;
+}
+
+.main-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+
+.header {
+  border-bottom: 1px solid var(--header-border);
+  background-color: var(--header-bg);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-title {
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+[data-theme="camunda"] .header-title {
+  color: #ffffff;
+}
+
+/* Traffic lights - dark theme only */
+.traffic-lights {
+  display: flex;
+  gap: 6px;
+}
+
+.traffic-light {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ─── Reset Button ─────────────────────────────────────────────────────────── */
+
+.btn-reset {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.btn-reset:hover {
+  color: var(--text-muted);
+}
+
+/* ─── Theme Selector ───────────────────────────────────────────────────────── */
+
+.theme-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.theme-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--card-border);
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.theme-btn.active {
+  background-color: var(--accent);
+  border-color: var(--card-border);
+  color: #ffffff;
+}
+
+/* ─── Card ─────────────────────────────────────────────────────────────────── */
+
+.card {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  overflow: hidden;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.card-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-accent-bar {
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.card-accent-bar.pink {
+  background-color: var(--accent-pink);
+}
+
+.card-accent-bar.success {
+  background-color: var(--success);
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-label);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.card-body {
+  padding: 20px 24px;
+}
+
+/* ─── Product Grid ─────────────────────────────────────────────────────────── */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--card-border);
+  background-color: var(--unselected-bg);
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.product-item:hover {
+  border-color: var(--accent);
+}
+
+.product-item.selected {
+  border-color: var(--accent);
+  background-color: var(--selected-bg);
+}
+
+.product-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 2px solid var(--text-dim);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.product-item.selected .product-checkbox {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.product-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  transition: color 0.2s;
+}
+
+.product-item.selected .product-label {
+  color: var(--text);
+}
+
+/* ─── Form Fields ──────────────────────────────────────────────────────────── */
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.field-label .required {
+  color: var(--accent);
+  margin-left: 4px;
+}
+
+.field-input {
+  width: 100%;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.25s ease;
+}
+
+.field-input::placeholder {
+  color: var(--text-dim);
+}
+
+.field-input:focus {
+  border-color: var(--input-focus);
+}
+
+/* ─── Checkbox Field ───────────────────────────────────────────────────────── */
+
+.field-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.field-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 2px solid var(--input-border);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.field-checkbox-box.checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.field-checkbox-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ─── Radio Field ──────────────────────────────────────────────────────────── */
+
+.radio-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.radio-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.radio-btn.selected {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+/* ─── Errors ───────────────────────────────────────────────────────────────── */
+
+.error-box {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--error);
+  background-color: var(--error-bg);
+  padding: 16px 24px;
+}
+
+.error-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--error);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.error-item {
+  font-size: 13px;
+  color: var(--error-text);
+  margin: 4px 0;
+}
+
+/* ─── Generate Button ──────────────────────────────────────────────────────── */
+
+.btn-generate {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background-color: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.btn-generate:hover {
+  background-color: var(--accent-hover);
+  box-shadow: 0 6px 28px var(--accent-glow);
+}
+
+/* ─── YAML Output ──────────────────────────────────────────────────────────── */
+
+.yaml-output {
+  margin-top: 32px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background-color: var(--yaml-bg);
+  overflow: hidden;
+  transition: background-color 0.25s ease;
+}
+
+.yaml-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.yaml-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.yaml-header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.yaml-pre {
+  padding: 20px 24px;
+  font-size: 13px;
+  color: var(--yaml-text);
+  overflow-x: auto;
+  line-height: 1.7;
+  white-space: pre;
+  margin: 0;
+  transition: color 0.25s ease;
+}
+
+.btn-copy {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-copy:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.btn-copy.copied {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-title {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .theme-selector {
+    gap: 4px;
+  }
+
+  .theme-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .main-content {
+    padding: 24px 16px;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  .card-header {
+    padding: 12px 16px;
+  }
+
+  .radio-group {
+    flex-direction: column;
+  }
+
+  .radio-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ─── Env Vars Editor ──────────────────────────────────────────────────────── */
+/*
+ * Dynamic list of name/value pairs rendered per product.
+ * The grid layout aligns name input, value input, and remove button in a row.
+ * On mobile, inputs stack vertically with the remove button spanning both rows.
+ */
+
+.env-vars-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.env-var-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.env-var-input {
+  width: 100%;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.env-var-input::placeholder {
+  color: var(--text-dim);
+}
+
+.env-var-input:focus {
+  border-color: var(--input-focus);
+}
+
+.btn-remove-env {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background-color: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.btn-remove-env:hover {
+  border-color: var(--error);
+  color: var(--error);
+  background-color: var(--error-bg);
+}
+
+.btn-add-env {
+  margin-top: 8px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--card-border);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-add-env:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.env-vars-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.env-vars-col-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+  .env-var-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .env-var-row .env-var-input:first-child {
+    grid-column: 1;
+  }
+
+  .env-var-row .env-var-input:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .btn-remove-env {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+}
+
+/* ─── Field Tooltip ────────────────────────────────────────────────────────── */
+/*
+ * Hover tooltip shown next to field labels. Uses position: fixed so it is
+ * never clipped by parent overflow. Position is calculated in JS (Tooltip
+ * component in App.jsx) based on the icon's getBoundingClientRect().
+ */
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--text-dim);
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  user-select: none;
+  line-height: 1;
+}
+
+.tooltip-icon:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tooltip-box {
+  /* visibility is controlled via inline styles in the Tooltip component */
+  display: none;
+  position: fixed;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 300px;
+  max-width: 300px;
+  line-height: 1.7;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-top-color: var(--card-border);
+}

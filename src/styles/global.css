@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ─── Global Reset & Base ──────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  /* Smooth transition when switching themes */
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Inherit font in interactive elements - browser defaults override otherwise */
+button, input {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  cursor: pointer;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}

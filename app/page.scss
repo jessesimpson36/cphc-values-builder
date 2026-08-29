@@ -1,7 +1,0 @@
-// Disable Carbon injecting font-face declarations
-@use '@carbon/react' with (
-  $css--font-face: false
-);
-@use '@carbon/grid';
-
-@include grid.flex-grid();
