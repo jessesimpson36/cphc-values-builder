@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Keeps cphc builder up to date",
+  "dependencyDashboard": true,
+  "packageRules": [
+    // The old config opened one PR per dependency, which is where the ~250 open
+    // renovate PRs came from. Group the routine npm bumps into a single PR.
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies",
+      "automerge": true,
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+    },
+  ],
+  // The previous regexManagers tracked image tags in the Kubernetes manifests
+  // (cphc-values-builder.yaml, ingress.yaml, cphc-service.yaml). Those manifests
+  // and the Dockerfile were removed in the Vite rewrite, so the managers are dropped.
+}
