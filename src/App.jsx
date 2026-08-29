@@ -13,16 +13,32 @@
  *   ├── Section (repeated for each visible section)
  *   │   └── Field (text | password | radio | checkbox | env_vars)
  *   │       └── Tooltip
+ *   ├── SizingPreview        (throughput target mode)
+ *   ├── MultiregionPreview   (multi-region mode)
  *   ├── Validation errors
  *   ├── Generate button
  *   └── YAML output
  */
 
 import { useState, useEffect, useRef } from "react"
-import { displayConfig } from "./displayConfig"
-import { transformAnswers } from "./transform"
+import {
+  displayConfig,
+  visibleSections as computeVisibleSections,
+  isFieldVisible,
+  violatedConstraints,
+} from "./displayConfig"
+import {
+  transformAnswers,
+  resolveSizing,
+  buildInitialContactPoints,
+  multiregionRegions,
+  effectiveClusterSize,
+} from "./transform"
+import { importValues } from "./importValues"
+import { CALIBRATION_PROFILES, DEFAULT_CALIBRATION } from "./sizing"
 import yaml from "js-yaml"
 import schema from "./schema.json"
+import chartMeta from "./chartMeta.json"
 
 // ─── Build a path → description lookup from schema.json ───────────────────────
 const schemaDescriptions = Object.fromEntries(
@@ -128,11 +144,63 @@ function EnvVarsEditor({ field, value, onChange }) {
   )
 }
 
+// ─── String List Editor ────────────────────────────────────────────────────────
+// An ordered list of plain strings. Order is significant for multi-region
+// namespaces: the position in the list is the region ID.
+
+function StringListEditor({ field, value, onChange }) {
+  const rows = value && value.length > 0 ? value : [""]
+
+  const update = (next) => onChange(field.id, next)
+
+  return (
+    <div className="field">
+      <div className="field-label-row">
+        <label className="field-label" style={{ margin: 0 }}>
+          {field.label}
+          {field.required && <span className="required">*</span>}
+        </label>
+        <Tooltip path={field.path} />
+      </div>
+
+      <div className="string-list-editor">
+        {rows.map((row, index) => (
+          <div key={index} className="string-list-row">
+            <span className="string-list-index">{index}</span>
+            <input
+              type="text"
+              className="field-input"
+              placeholder={field.placeholder}
+              value={row}
+              onChange={(e) => update(rows.map((r, i) => (i === index ? e.target.value : r)))}
+            />
+            <button
+              className="btn-remove-env"
+              onClick={() => update(rows.filter((_, i) => i !== index))}
+              disabled={rows.length === 1}
+              title="Remove"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button className="btn-add-env" onClick={() => update([...rows, ""])}>
+          + Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Field ─────────────────────────────────────────────────────────────────────
 function Field({ field, value, onChange }) {
 
   if (field.type === "env_vars") {
     return <EnvVarsEditor field={field} value={value} onChange={onChange} />
+  }
+
+  if (field.type === "string_list") {
+    return <StringListEditor field={field} value={value} onChange={onChange} />
   }
 
   if (field.type === "text" || field.type === "password") {
@@ -211,15 +279,106 @@ function Section({ section, answers, onFieldChange }) {
         <h2 className="card-title">{section.title}</h2>
       </div>
       <div className="card-body">
-        {section.fields.map((field) => (
-          <Field
-            key={field.id}
-            field={field}
-            value={answers[field.id]}
-            onChange={onFieldChange}
-          />
-        ))}
+        {section.fields
+          .filter((field) => isFieldVisible(field, answers))
+          .map((field) => (
+            <Field
+              key={field.id}
+              field={field}
+              value={answers[field.id]}
+              onChange={onFieldChange}
+            />
+          ))}
       </div>
+    </div>
+  )
+}
+
+// ─── Sizing Preview ────────────────────────────────────────────────────────────
+//
+// Shows the computed topology before the user commits to it. Partition count in
+// particular cannot be changed later by editing values.yaml — it needs a cluster
+// scaling procedure — so it is worth seeing the number before installing.
+
+function SizingPreview({ answers }) {
+  const sizing = resolveSizing(answers)
+  if (!sizing) return null
+
+  const calibration = CALIBRATION_PROFILES[answers.sizing_calibration || DEFAULT_CALIBRATION]
+
+  return (
+    <div className="preview-panel">
+      <div className="preview-header">Computed topology</div>
+
+      <div className="preview-grid">
+        <div className="preview-stat">
+          <span className="preview-value">{sizing.clusterSize}</span>
+          <span className="preview-label">brokers</span>
+        </div>
+        <div className="preview-stat">
+          <span className="preview-value">{sizing.partitionCount}</span>
+          <span className="preview-label">partitions</span>
+        </div>
+        <div className="preview-stat">
+          <span className="preview-value">{sizing.replicationFactor}</span>
+          <span className="preview-label">replication factor</span>
+        </div>
+        {sizing.totalVcpu != null && (
+          <div className="preview-stat">
+            <span className="preview-value">{sizing.totalVcpu}</span>
+            <span className="preview-label">total vCPU</span>
+          </div>
+        )}
+      </div>
+
+      {sizing.tasksPerSecond != null && (
+        <p className="preview-note">
+          Sized for {sizing.tasksPerSecond.toLocaleString()} tasks per second
+          {calibration && ` using the ${calibration.label.toLowerCase()} calibration — ${calibration.note}`}
+        </p>
+      )}
+
+      {(sizing.notes || []).map((note, i) => (
+        <p key={i} className="preview-note">{note}</p>
+      ))}
+
+      <p className="preview-caveat">
+        A starting point, not a guarantee. Real throughput depends on your process model,
+        payload size and disk latency. Camunda recommends sizing for roughly 20x average
+        load and validating with a load test before go-live. Partition count cannot be
+        changed by editing values.yaml after install.
+      </p>
+    </div>
+  )
+}
+
+// ─── Multi-region Preview ──────────────────────────────────────────────────────
+//
+// The contact point list is the part of a dual-region install that is most
+// tedious to write by hand and hardest to spot as wrong, so show it in full.
+
+function MultiregionPreview({ answers }) {
+  // Same helper transform.js uses, so the preview cannot drift from the output.
+  const clusterSize = effectiveClusterSize(answers)
+  const contactPoints = buildInitialContactPoints(answers, clusterSize)
+
+  if (contactPoints.length === 0) return null
+
+  const regions = multiregionRegions(answers)
+
+  return (
+    <div className="preview-panel">
+      <div className="preview-header">Generated initial contact points</div>
+      <p className="preview-note">
+        {clusterSize} brokers across {regions} regions — {clusterSize / regions} per region.
+        The chart cannot compute this list itself because it has no way to know the other
+        region&apos;s namespace, so it is passed as CAMUNDA_CLUSTER_INITIALCONTACTPOINTS.
+      </p>
+      <pre className="preview-code">{contactPoints.join("\n")}</pre>
+      <p className="preview-caveat">
+        Generate this file once per region, changing only the region ID. Every other value
+        must be identical across regions.
+      </p>
     </div>
   )
 }
@@ -248,20 +407,45 @@ function ThemeSelector({ current, onChange }) {
   )
 }
 
+// ─── Theme persistence ─────────────────────────────────────────────────────────
+//
+// localStorage is unavailable in more situations than it looks: a browser with
+// site data blocked, some private-browsing modes, and any non-browser renderer.
+// Reading it unguarded throws before the app paints anything, so both accesses
+// are wrapped and the theme simply falls back to the default.
+
+const THEME_STORAGE_KEY = "helm-theme"
+
+function readStoredTheme() {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) || "dark"
+  } catch {
+    return "dark"
+  }
+}
+
+function storeTheme(theme) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  } catch {
+    // Preference is not persisted; the app still works for this session.
+  }
+}
+
 // ─── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [answers, setAnswers] = useState({ products: [] })
   const [yamlOutput, setYamlOutput] = useState("")
   const [copied, setCopied] = useState(false)
   const [errors, setErrors] = useState([])
+  const [importReport, setImportReport] = useState(null)
+  const fileInputRef = useRef(null)
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("helm-theme") || "dark"
-  })
+  const [theme, setTheme] = useState(readStoredTheme)
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
-    localStorage.setItem("helm-theme", theme)
+    storeTheme(theme)
   }, [theme])
 
   const handleProductToggle = (productId) => {
@@ -277,15 +461,16 @@ export default function App() {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }))
   }
 
-  const visibleSections = displayConfig.sections.filter((s) => s.showIf(answers))
+  const visibleSections = computeVisibleSections(answers)
 
   const validate = () => {
     const errs = []
+
     for (const section of visibleSections) {
       for (const field of section.fields) {
-        if (field.type !== "env_vars" && field.required && !answers[field.id]) {
-          errs.push(`${section.title} → ${field.label} is required`)
-        }
+        // A field the user cannot see cannot be required of them.
+        if (!isFieldVisible(field, answers)) continue
+
         if (field.type === "env_vars") {
           const rows = answers[field.id] || []
           rows.forEach((row, i) => {
@@ -293,9 +478,29 @@ export default function App() {
               errs.push(`${section.title} → Environment variable row ${i + 1} must have both a name and value`)
             }
           })
+          continue
+        }
+
+        if (field.type === "string_list") {
+          const items = (answers[field.id] || []).filter((item) => (item || "").trim())
+          if (field.required && items.length === 0) {
+            errs.push(`${section.title} → ${field.label} needs at least one entry`)
+          }
+          continue
+        }
+
+        if (field.required && !answers[field.id]) {
+          errs.push(`${section.title} → ${field.label} is required`)
         }
       }
     }
+
+    // Rules the chart enforces at template time. Catching them here turns a
+    // failed `helm install` into a message the user can act on.
+    for (const constraint of violatedConstraints(answers)) {
+      errs.push(constraint.message)
+    }
+
     return errs
   }
 
@@ -331,6 +536,29 @@ export default function App() {
     setAnswers({ products: [] })
     setYamlOutput("")
     setErrors([])
+    setImportReport(null)
+  }
+
+  // Load an existing values.yaml back into the form so it can be edited and
+  // regenerated, rather than rebuilt from memory.
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Allow re-selecting the same file after a failed parse.
+    event.target.value = ""
+
+    try {
+      const parsed = yaml.load(await file.text())
+      const { answers: imported, unmapped, warnings } = importValues(parsed)
+
+      setAnswers(imported)
+      setYamlOutput("")
+      setErrors([])
+      setImportReport({ fileName: file.name, unmapped, warnings })
+    } catch (error) {
+      setImportReport({ fileName: file.name, unmapped: [], warnings: [], error: error.message })
+    }
   }
 
   return (
@@ -349,6 +577,16 @@ export default function App() {
         </div>
         <div className="header-right">
           <ThemeSelector current={theme} onChange={setTheme} />
+          <input
+            type="file"
+            accept=".yaml,.yml"
+            ref={fileInputRef}
+            onChange={handleImport}
+            style={{ display: "none" }}
+          />
+          <button className="btn-reset" onClick={() => fileInputRef.current?.click()}>
+            Import values.yaml
+          </button>
           <button className="btn-reset" onClick={handleReset}>Reset</button>
         </div>
       </header>
@@ -386,14 +624,48 @@ export default function App() {
           </div>
         </div>
 
+        {/* Import report */}
+        {importReport && (
+          <div className={importReport.error ? "error-box" : "import-box"}>
+            {importReport.error ? (
+              <>
+                <p className="error-title">Could not read {importReport.fileName}</p>
+                <p className="error-item">{importReport.error}</p>
+              </>
+            ) : (
+              <>
+                <p className="import-title">Loaded {importReport.fileName}</p>
+                {importReport.warnings.map((warning, i) => (
+                  <p key={i} className="error-item">→ {warning}</p>
+                ))}
+                {importReport.unmapped.length > 0 && (
+                  <>
+                    <p className="import-note">
+                      {importReport.unmapped.length} setting(s) in that file are not covered by this
+                      form. They will be dropped if you regenerate — copy them across by hand:
+                    </p>
+                    <pre className="preview-code">{importReport.unmapped.join("\n")}</pre>
+                  </>
+                )}
+                {importReport.unmapped.length === 0 && importReport.warnings.length === 0 && (
+                  <p className="import-note">Every setting in that file is represented in the form.</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Dynamic Sections */}
         {visibleSections.map((section) => (
-          <Section
-            key={section.id}
-            section={section}
-            answers={answers}
-            onFieldChange={handleFieldChange}
-          />
+          <div key={section.id}>
+            <Section
+              section={section}
+              answers={answers}
+              onFieldChange={handleFieldChange}
+            />
+            {section.id === "sizing" && <SizingPreview answers={answers} />}
+            {section.id === "multiRegionConfig" && <MultiregionPreview answers={answers} />}
+          </div>
         ))}
 
         {/* Validation Errors */}
@@ -431,6 +703,12 @@ export default function App() {
             <pre className="yaml-pre">{yamlOutput}</pre>
           </div>
         )}
+
+        <footer className="app-footer">
+          Generated for {chartMeta.chart} chart {chartMeta.version} (Camunda {chartMeta.appVersion}).
+          {" "}Install with{" "}
+          <code>helm install camunda camunda/camunda-platform --version {chartMeta.version} -f values.yaml</code>
+        </footer>
 
       </main>
     </div>
