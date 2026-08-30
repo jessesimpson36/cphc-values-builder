@@ -346,6 +346,32 @@ export const scenarios = [
     },
   },
 
+  // ── RDBMS secondary storage (8.9 only) ──────────────────────────────────────
+  {
+    name: 'rdbms-secondary-storage',
+    description: 'Orchestration Cluster on PostgreSQL instead of Elasticsearch/OpenSearch. No document store deployed at all.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration'],
+      databaseType: 'rdbms',
+      rdbms_url: 'jdbc:postgresql://postgres.example.internal:5432/camunda',
+      rdbms_username: 'camunda',
+      rdbms_password: 'rdbms-secret',
+    },
+  },
+  {
+    name: 'rdbms-aurora-irsa',
+    description: 'RDBMS on AWS Aurora, authenticating via IAM (IRSA) instead of a password.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration'],
+      databaseType: 'rdbms',
+      rdbms_url: 'jdbc:postgresql://aurora.cluster-xyz.eu-central-1.rds.amazonaws.com:5432/camunda',
+      rdbms_username: 'camunda',
+      rdbms_aws_irsa: true,
+    },
+  },
+
   // ── Camunda 8.7 ────────────────────────────────────────────────────────────
   // 8.7 predates the 8.8 merge of Zeebe/Zeebe Gateway/Operate/Tasklist into one
   // "Orchestration Cluster" component, and predates the <base>.secret.* secret

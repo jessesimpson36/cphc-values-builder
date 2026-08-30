@@ -203,13 +203,39 @@ export const displayConfig = {
         answers.products.includes('optimize'),
       fields: [
         {
+          // 'rdbms' is Orchestration Cluster's secondary storage only — Optimize
+          // always needs Elasticsearch or OpenSearch regardless (the chart has
+          // no RDBMS option for Optimize's own analytics store at all), and
+          // rdbms requires Camunda 8.9+. Both are chart rules, not something a
+          // showIf can express cleanly, so they are checked as constraints
+          // instead of removing the option outright.
           id: 'databaseType',
           path: null,
           label: 'Select Database Type',
           type: 'radio',
-          options: ['elasticsearch', 'opensearch'],
+          options: ['elasticsearch', 'opensearch', 'rdbms'],
           required: true,
         }
+      ]
+    },
+
+    // ── RDBMS (Orchestration Cluster secondary storage) ─────────────────────────
+    // A relational database instead of Elasticsearch/OpenSearch for the
+    // Orchestration Cluster's own history/search storage. Introduced in
+    // Camunda 8.9 - see docs.camunda.io/docs/self-managed/concepts/databases/relational-db/.
+    // Optimize is never wired to this section; it has no RDBMS option.
+    {
+      id: 'rdbmsDatabase',
+      title: 'RDBMS Configuration',
+      showIf: (answers) =>
+        answers.products.includes('orchestration') && answers.databaseType === 'rdbms',
+      fields: [
+        { id: 'rdbms_url',      path: 'orchestration.data.secondaryStorage.rdbms.url',      label: 'JDBC URL',  type: 'text', required: true,
+          placeholder: 'jdbc:postgresql://host:5432/camunda' },
+        { id: 'rdbms_username', path: 'orchestration.data.secondaryStorage.rdbms.username', label: 'Username',  type: 'text', required: true },
+        { id: 'rdbms_aws_irsa', path: 'orchestration.data.secondaryStorage.rdbms.aws.enabled', label: 'Authenticate with AWS IAM (Aurora IRSA) instead of a password', type: 'checkbox', required: false },
+        ...secretFields('rdbms_password', 'orchestration.data.secondaryStorage.rdbms.secret', 'Password', { required: true })
+          .map((f) => ({ ...f, showIf: (a) => !a.rdbms_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
       ]
     },
 
@@ -826,6 +852,18 @@ export const displayConfig = {
   // Keep these in sync with templates/common/constraints.tpl in the chart.
 
   constraints: [
+    {
+      id: 'rdbmsRequires89',
+      message: 'RDBMS secondary storage requires Camunda 8.9 or newer. Select 8.9 in the header, or choose Elasticsearch/OpenSearch instead.',
+      violated: (answers) =>
+        answers.databaseType === 'rdbms' && !!answers.chartVersion && answers.chartVersion !== '8.9',
+    },
+    {
+      id: 'rdbmsIncompatibleWithOptimize',
+      message: 'Optimize has no RDBMS option — it always needs Elasticsearch or OpenSearch. Deselect Optimize, or choose Elasticsearch/OpenSearch as the database type.',
+      violated: (answers) =>
+        answers.databaseType === 'rdbms' && answers.products.includes('optimize'),
+    },
     {
       id: 'consoleNeedsIdentity',
       message: 'Console requires Management Identity. Select Identity as well, or point Console at an external Identity instance.',

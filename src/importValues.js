@@ -44,6 +44,7 @@ function detectProducts(values, targetVersion) {
 }
 
 function detectDatabaseType(values) {
+  if (getNestedValue(values, 'orchestration.data.secondaryStorage.type') === 'rdbms') return 'rdbms'
   if (getNestedValue(values, 'global.elasticsearch.enabled') === true) return 'elasticsearch'
   if (getNestedValue(values, 'global.opensearch.enabled') === true) return 'opensearch'
   return undefined

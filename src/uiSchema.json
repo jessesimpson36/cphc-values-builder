@@ -422,6 +422,42 @@
         "8.8"
       ]
     },
+    "orchestration.data.secondaryStorage.rdbms.aws.enabled": {
+      "description": "enable AWS IAM Database Authentication for RDBMS connection",
+      "versions": [
+        "8.9"
+      ]
+    },
+    "orchestration.data.secondaryStorage.rdbms.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the password",
+      "versions": [
+        "8.9"
+      ]
+    },
+    "orchestration.data.secondaryStorage.rdbms.secret.existingSecretKey": {
+      "description": "defines the key within the existing Kubernetes Secret",
+      "versions": [
+        "8.9"
+      ]
+    },
+    "orchestration.data.secondaryStorage.rdbms.secret.inlineSecret": {
+      "description": "can be used to provide the JDBC password as a plain-text value for non-production usage",
+      "versions": [
+        "8.9"
+      ]
+    },
+    "orchestration.data.secondaryStorage.rdbms.url": {
+      "description": "the JDBC connection URL for the RDBMS database",
+      "versions": [
+        "8.9"
+      ]
+    },
+    "orchestration.data.secondaryStorage.rdbms.username": {
+      "description": "the JDBMC username for authenticating with the RDBMS database",
+      "versions": [
+        "8.9"
+      ]
+    },
     "orchestration.env": {
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/orchestration-cluster/core-settings/configuration/properties/ for more details.",
       "versions": [

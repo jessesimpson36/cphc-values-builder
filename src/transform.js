@@ -156,7 +156,20 @@ function applyProductFlags(helmValues, answers) {
   // Only relevant if orchestration or optimize is selected
   const needsSearchDB = selected.includes("orchestration") || selected.includes("optimize")
 
-  if (needsSearchDB) {
+  // RDBMS replaces Elasticsearch/OpenSearch for Orchestration Cluster's own
+  // secondary storage only - Optimize has no RDBMS option and always needs a
+  // document store (the constraint rdbmsIncompatibleWithOptimize keeps the two
+  // from being selected together in the UI). orchestration.data.secondaryStorage
+  // does not exist before 8.9 at all (the constraint rdbmsRequires89 keeps the
+  // UI from generating this combination) - guarded again here so a caller that
+  // bypasses the UI, like the cross-version path validator, cannot produce a
+  // file that writes a path the target chart doesn't have.
+  if (needsSearchDB && answers.databaseType === "rdbms" && selectedVersion(answers) === "8.9") {
+    helmValues = setNestedValue(helmValues, "orchestration.data.secondaryStorage.type", "rdbms")
+    helmValues = setNestedValue(helmValues, "global.elasticsearch.enabled", false)
+    helmValues = setNestedValue(helmValues, "global.opensearch.enabled", false)
+    helmValues = setNestedValue(helmValues, "elasticsearch.enabled", false)
+  } else if (needsSearchDB) {
     if (answers.databaseType === "elasticsearch") {
       helmValues = setNestedValue(helmValues, "global.elasticsearch.enabled", true)
       helmValues = setNestedValue(helmValues, "global.elasticsearch.external", true)

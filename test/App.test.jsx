@@ -307,6 +307,31 @@ describe('cross-component constraints', () => {
     expect(screen.getByText('Generated values.yaml')).toBeDefined()
     expect(screen.queryByText(/Console requires Management Identity/)).toBeNull()
   })
+
+  it('blocks RDBMS combined with Optimize', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    selectProduct('Optimize')
+    clickOption('rdbms')
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText(/Optimize has no RDBMS option/)).toBeDefined()
+  })
+
+  it('blocks RDBMS on a release other than 8.9', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '8.8' }))
+    selectProduct('Orchestration Cluster')
+    clickOption('rdbms')
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText(/RDBMS secondary storage requires Camunda 8.9/)).toBeDefined()
+  })
+
+  it('offers RDBMS Configuration once a valid combination is chosen', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    clickOption('rdbms')
+    expect(screen.getByText('RDBMS Configuration')).toBeDefined()
+  })
 })
 
 describe('generated output', () => {
