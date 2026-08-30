@@ -697,6 +697,46 @@ export const displayConfig = {
       ]
     },
 
+    // ── Gateway API ──────────────────────────────────────────────────────────────
+    // Kubernetes Gateway API, the successor to Ingress. The chart enforces that
+    // the two cannot both be enabled - the gatewayIncompatibleWithIngress
+    // constraint mirrors that rule so the user sees it in the form rather than
+    // in a failed helm install. New in Camunda 8.9 - global.gateway does not
+    // exist on 8.7 or 8.8, hence gatewayRequires89 below.
+    {
+      id: 'gatewayApi',
+      title: 'Gateway API',
+      showIf: (answers) => answers.products.length > 0,
+      fields: [
+        { id: 'gateway_enabled', path: 'global.gateway.enabled', label: 'Enable Gateway API (instead of Ingress)', type: 'checkbox', required: false },
+      ]
+    },
+
+    // ── Gateway API Configuration ─────────────────────────────────────────────────
+    {
+      id: 'gatewayApiConfig',
+      title: 'Gateway API Configuration',
+      showIf: (answers) => answers.products.length > 0 && answers.gateway_enabled === true,
+      fields: [
+        {
+          id: 'gateway_create_resource',
+          path: 'global.gateway.createGatewayResource',
+          label: 'Create the Gateway resource (uncheck to reference an existing shared Gateway)',
+          type: 'checkbox',
+          required: false,
+        },
+        { id: 'gateway_class', path: 'global.gateway.className', label: 'GatewayClass', type: 'text', required: false,
+          showIf: (a) => a.gateway_create_resource === true },
+        { id: 'gateway_name', path: 'global.gateway.name', label: 'Existing Gateway name', type: 'text', required: true,
+          showIf: (a) => a.gateway_create_resource !== true },
+        { id: 'gateway_namespace', path: 'global.gateway.namespace', label: 'Existing Gateway namespace', type: 'text', required: false,
+          showIf: (a) => a.gateway_create_resource !== true },
+        { id: 'gateway_tls_enabled', path: 'global.gateway.tls.enabled', label: 'Enable TLS', type: 'checkbox', required: false },
+        { id: 'gateway_tls_secret', path: 'global.gateway.tls.secretName', label: 'TLS Secret Name', type: 'text', required: false,
+          showIf: (a) => a.gateway_tls_enabled === true },
+      ]
+    },
+
     // ── Orchestration gRPC Ingress ─────────────────────────────────────────────
     // Toggle shown when orchestration is selected.
     // gRPC ingress is separate from global ingress because it requires different
@@ -857,6 +897,17 @@ export const displayConfig = {
       message: 'RDBMS secondary storage requires Camunda 8.9 or newer. Select 8.9 in the header, or choose Elasticsearch/OpenSearch instead.',
       violated: (answers) =>
         answers.databaseType === 'rdbms' && !!answers.chartVersion && answers.chartVersion !== '8.9',
+    },
+    {
+      id: 'gatewayIncompatibleWithIngress',
+      message: 'Gateway API and Ingress cannot both be enabled — this mirrors a rule the chart itself enforces. Disable one of them.',
+      violated: (answers) => answers.gateway_enabled === true && answers.ingress_enabled === true,
+    },
+    {
+      id: 'gatewayRequires89',
+      message: 'Gateway API requires Camunda 8.9 or newer. Select 8.9 in the header, or use Ingress instead.',
+      violated: (answers) =>
+        answers.gateway_enabled === true && !!answers.chartVersion && answers.chartVersion !== '8.9',
     },
     {
       id: 'rdbmsIncompatibleWithOptimize',
