@@ -468,7 +468,64 @@ describe('8.7 credential shapes', () => {
   })
 })
 
-// ─── 9. Output is always valid YAML ───────────────────────────────────────────
+// ─── 9. RDBMS secondary storage (8.9 only) ────────────────────────────────────
+//
+// orchestration.data.secondaryStorage.rdbms.* is new in Camunda 8.9 - it does
+// not exist on 8.7 or 8.8 at all (verified against both vendored schemas).
+
+describe('RDBMS secondary storage', () => {
+  it('configures RDBMS and deploys no document store at all', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], chartVersion: '8.9', databaseType: 'rdbms',
+      rdbms_url: 'jdbc:postgresql://db:5432/camunda', rdbms_username: 'camunda', rdbms_password: 'secret',
+    })
+    expect(out.orchestration.data.secondaryStorage.type).toBe('rdbms')
+    expect(out.orchestration.data.secondaryStorage.rdbms.url).toBe('jdbc:postgresql://db:5432/camunda')
+    expect(out.global.elasticsearch.enabled).toBe(false)
+    expect(out.global.opensearch.enabled).toBe(false)
+    expect(out.elasticsearch.enabled).toBe(false)
+  })
+
+  it('does not require a password when authenticating via Aurora IRSA', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], chartVersion: '8.9', databaseType: 'rdbms',
+      rdbms_url: 'jdbc:postgresql://aurora:5432/camunda', rdbms_username: 'camunda', rdbms_aws_irsa: true,
+    })
+    expect(out.orchestration.data.secondaryStorage.rdbms.aws.enabled).toBe(true)
+    expect(out.orchestration.data.secondaryStorage.rdbms.secret).toBeUndefined()
+  })
+
+  it('never writes secondaryStorage on 8.7 or 8.8, where the path does not exist', () => {
+    // Reachable only by bypassing the UI's rdbmsRequires89 constraint - guarded
+    // again here so a direct transformAnswers call can't produce a file that
+    // references a path the target chart doesn't have.
+    for (const version of ['8.7', '8.8']) {
+      const out = transformAnswers({
+        products: ['orchestration'], chartVersion: version, databaseType: 'rdbms',
+        rdbms_url: 'jdbc:postgresql://db:5432/camunda', rdbms_username: 'camunda', rdbms_password: 'secret',
+      })
+      expect(out.orchestration?.data, version).toBeUndefined()
+    }
+  })
+})
+
+describe('RDBMS constraints', () => {
+  it('rejects RDBMS combined with Optimize — Optimize has no RDBMS option', () => {
+    const violated = displayConfig.constraints.find((c) => c.id === 'rdbmsIncompatibleWithOptimize')
+    expect(violated.violated({ products: ['orchestration', 'optimize'], databaseType: 'rdbms' })).toBe(true)
+    expect(violated.violated({ products: ['orchestration'], databaseType: 'rdbms' })).toBe(false)
+  })
+
+  it('rejects RDBMS on any release other than 8.9', () => {
+    const constraint = displayConfig.constraints.find((c) => c.id === 'rdbmsRequires89')
+    expect(constraint.violated({ products: ['orchestration'], databaseType: 'rdbms', chartVersion: '8.7' })).toBe(true)
+    expect(constraint.violated({ products: ['orchestration'], databaseType: 'rdbms', chartVersion: '8.9' })).toBe(false)
+    // Unset chartVersion defaults to 8.9 elsewhere in the app - must not false-flag here.
+    expect(constraint.violated({ products: ['orchestration'], databaseType: 'rdbms' })).toBe(false)
+  })
+})
+
+// ─── 10. Output is always valid YAML ──────────────────────────────────────────
 
 describe('serialisation', () => {
   it('round-trips every scenario through js-yaml', () => {
