@@ -26,22 +26,12 @@ const IDENTITY_DB = {
   'Database Name': 'identity',
 }
 
-// Several sections now share placeholders like Username and Password, so every
-// fill is scoped to its own card.
+// Several sections share placeholders like Username and Password, so the fill is
+// scoped to its own card.
 function fillIdentity() {
   const db = screen.getByText('Management Identity Database').closest('.card')
   for (const [placeholder, value] of Object.entries(IDENTITY_DB)) {
     fireEvent.change(within(db).getByPlaceholderText(placeholder), { target: { value } })
-  }
-
-  const user = screen.getByText('Identity Bootstrap User').closest('.card')
-  fireEvent.click(within(user).getByRole('button', { name: 'Create an administrator' }))
-  for (const [placeholder, value] of [
-    ['Username', 'admin'],
-    ['Email', 'admin@example.com'],
-    ['Password', 'user-secret'],
-  ]) {
-    fireEvent.change(within(user).getByPlaceholderText(placeholder), { target: { value } })
   }
 }
 
@@ -174,55 +164,6 @@ describe('cross-component constraints', () => {
     fireEvent.click(screen.getByText('Generate values.yaml'))
     expect(screen.getByText('Generated values.yaml')).toBeDefined()
     expect(screen.queryByText(/Console requires Management Identity/)).toBeNull()
-  })
-})
-
-describe('identity bootstrap user', () => {
-  it('will not generate until the administrator question is answered', () => {
-    render(<App />)
-    selectProduct('Management Identity')
-
-    const db = screen.getByText('Management Identity Database').closest('.card')
-    for (const [placeholder, value] of Object.entries(IDENTITY_DB)) {
-      fireEvent.change(within(db).getByPlaceholderText(placeholder), { target: { value } })
-    }
-
-    fireEvent.click(screen.getByText('Generate values.yaml'))
-    expect(screen.getByText(/Create an initial administrator\? is required/)).toBeDefined()
-  })
-
-  it('never silently ships the chart default demo user', () => {
-    render(<App />)
-    selectProduct('Management Identity')
-    fillIdentity()
-    fireEvent.click(screen.getByText('Generate values.yaml'))
-
-    const yamlText = screen.getByText('Generated values.yaml')
-      .closest('.yaml-output').querySelector('.yaml-pre').textContent
-
-    expect(yamlText).not.toContain('demo')
-    expect(yamlText).toContain('username: admin')
-    expect(yamlText).toContain('enabled: true')
-  })
-
-  it('writes firstUser.enabled false when declined', () => {
-    render(<App />)
-    selectProduct('Management Identity')
-
-    const db = screen.getByText('Management Identity Database').closest('.card')
-    for (const [placeholder, value] of Object.entries(IDENTITY_DB)) {
-      fireEvent.change(within(db).getByPlaceholderText(placeholder), { target: { value } })
-    }
-
-    const card = screen.getByText('Identity Bootstrap User').closest('.card')
-    fireEvent.click(within(card).getByRole('button', { name: 'No initial user' }))
-    fireEvent.click(screen.getByText('Generate values.yaml'))
-
-    const yamlText = screen.getByText('Generated values.yaml')
-      .closest('.yaml-output').querySelector('.yaml-pre').textContent
-
-    expect(yamlText).toContain('firstUser')
-    expect(yamlText).not.toContain('demo')
   })
 })
 

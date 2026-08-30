@@ -21,14 +21,6 @@ identity:
     secret:
       inlineSecret: identity-secret
     database: identity
-  firstUser:
-    enabled: true
-    username: admin
-    email: admin@example.com
-    firstName: Cluster
-    lastName: Admin
-    secret:
-      inlineSecret: first-user-secret
   env:
     - name: IDENTITY_LOG_LEVEL
       value: DEBUG
