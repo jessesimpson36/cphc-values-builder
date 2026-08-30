@@ -1,0 +1,36 @@
+orchestration:
+  enabled: true
+  data:
+    secondaryStorage:
+      type: rdbms
+      rdbms:
+        url: jdbc:postgresql://aurora.cluster-xyz.eu-central-1.rds.amazonaws.com:5432/camunda
+        username: camunda
+        aws:
+          enabled: true
+  ingress:
+    grpc:
+      enabled: false
+optimize:
+  enabled: false
+identity:
+  enabled: false
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: false
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: false
+global:
+  elasticsearch:
+    enabled: false
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+elasticsearch:
+  enabled: false

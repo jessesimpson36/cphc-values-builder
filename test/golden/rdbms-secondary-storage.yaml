@@ -1,0 +1,36 @@
+orchestration:
+  enabled: true
+  data:
+    secondaryStorage:
+      type: rdbms
+      rdbms:
+        url: jdbc:postgresql://postgres.example.internal:5432/camunda
+        username: camunda
+        secret:
+          inlineSecret: rdbms-secret
+  ingress:
+    grpc:
+      enabled: false
+optimize:
+  enabled: false
+identity:
+  enabled: false
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: false
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: false
+global:
+  elasticsearch:
+    enabled: false
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+elasticsearch:
+  enabled: false
