@@ -14,6 +14,7 @@ import { SUPPORTED_VERSIONS, DEFAULT_VERSION } from '../src/chartVersions.js'
 import { loadValues } from '../src/yaml.js'
 import fs from 'fs'
 
+const chart87 = loadValues(fs.readFileSync('public/charts/8.7/values.yaml', 'utf8'))
 const chart88 = loadValues(fs.readFileSync('public/charts/8.8/values.yaml', 'utf8'))
 const chart89 = loadValues(fs.readFileSync('public/charts/8.9/values.yaml', 'utf8'))
 
@@ -70,6 +71,33 @@ describe('compareVersions', () => {
     // path invented by a hand-edited file should never accidentally match one.
     const result = compareVersions({ totally: { made: { up: 'value' } } }, '8.9')
     expect(result.removedPaths.every((r) => r.managedByForm === false)).toBe(true)
+  })
+})
+
+describe('comparing from 8.7 — the direction that matters most with three releases', () => {
+  // 8.7 predates the merge of Zeebe, Zeebe Gateway, Operate and Tasklist into
+  // one Orchestration Cluster component (see docs/architecture.md). A file
+  // written for 8.7 uses zeebe.* and zeebeGateway.ingress.grpc.* throughout,
+  // none of which exist on 8.8 or 8.9 at all.
+  it('flags the pre-merge component paths as gone on both 8.8 and 8.9', () => {
+    for (const target of ['8.8', '8.9']) {
+      const result = compareVersions(chart87, target)
+      const paths = result.removedPaths.map((r) => r.path)
+
+      expect(paths, target).toContain('zeebe.clusterSize')
+      expect(paths, target).toContain('zeebeGateway.ingress.grpc.enabled')
+      expect(result.removedPaths.length, target).toBeGreaterThan(500)
+    }
+  })
+
+  it('is not symmetric with the same file compared the other way', () => {
+    // An 8.9 file naturally lacks the zeebe.* paths a target 8.7 chart wants —
+    // a different, equally real set of losses, not the same list reversed.
+    const forward = compareVersions(chart87, '8.9')
+    const backward = compareVersions(chart89, '8.7')
+
+    expect(backward.removedPaths.map((r) => r.path)).toContain('orchestration.clusterSize')
+    expect(forward.removedPaths.length).not.toBe(backward.removedPaths.length)
   })
 })
 
