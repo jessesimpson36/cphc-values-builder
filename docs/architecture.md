@@ -260,6 +260,59 @@ Gateway — matching the chart's own default rather than assuming this release
 should create its own. Gateway API is commonly one Gateway a platform team
 manages centrally, with many releases attaching routes to it.
 
+## Identity authentication (OIDC)
+
+Two independent OIDC surfaces, which the chart reads separately and a deployment
+running both components needs both of:
+
+- `orchestration.security.authentication.oidc.*` — the Orchestration Cluster
+  (Zeebe, Operate, Tasklist). 8.8+ only.
+- `global.identity.auth.*` — Management Identity and the web applications behind
+  it (Console, Web Modeler, Optimize). Present on all three supported releases.
+
+The second one carries per-component client registrations — client ID, audience,
+redirect URL and secret for each of Identity, Console, Web Modeler and Optimize —
+each gated on its own product being selected, so a deployment without Optimize
+never renders Optimize's client fields.
+
+**8.7 has no inline client secret** for the Identity and Optimize clients, only a
+flat `existingSecret`/`existingSecretKey` pair, so those two credentials use a
+`field.paths` override with `inline: null`. `secretFields()` now defaults the mode
+toggle to existing-secret whenever inline resolves to null for the selected
+release — otherwise 8.7 would render a mode toggle above two hidden fields and
+nothing else.
+
+**One chart rule mirrored:** setting the Identity client secret while the provider
+type is `KEYCLOAK` fails the render outright, because Keycloak issues that
+credential itself. Present on every supported release (8.7 words it against the
+flat key, 8.8+ against `.secret`). The `identityClientSecretWithKeycloak`
+constraint catches it in the form, and the field is hidden under KEYCLOAK anyway.
+
+### External Management Identity
+
+The chart treats `global.identity.service.url` as satisfying the
+Console/Web-Modeler-requires-Identity rule outright:
+
+```
+$identityEnabled := (or .Values.identity.enabled .Values.global.identity.service.url)
+```
+
+Verified by rendering Console with only the URL set. This closed a real gap: the
+`consoleNeedsIdentity` and `webModelerNeedsIdentity` messages had always told
+users to point at an external Identity, while the tool offered nowhere to do it.
+Both constraints now stand down when the URL is set.
+
+The URL is consumed as `CAMUNDA_IDENTITY_BASEURL` and Web Modeler's `base-url`,
+but only once `global.identity.auth.enabled` is true — checked by rendering both
+ways, since a value that merely gates a constraint without being read anywhere
+is exactly the `identity.firstUser` trap this project has already hit once.
+
+**Deliberately not included:** `global.identity.keycloak.url.*` (pointing at your
+own external Keycloak). Its sub-keys exist only in the chart's
+`values.schema.extra.json`, not in `values.yaml`, so `npm run parse` never sees
+them and `npm run validate` would reject them as nonexistent. Supporting it means
+teaching the parser about the extra schema first.
+
 ## Multi-region
 
 A dual-region cluster is one logical Zeebe cluster stretched across two

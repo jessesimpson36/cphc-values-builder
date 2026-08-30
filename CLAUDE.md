@@ -136,6 +136,28 @@ release" leftover-state case. Defaults to referencing an existing Gateway
 (`createGatewayResource: false`), matching the chart default - Gateway API is
 usually one resource a platform team manages centrally.
 
+### Identity authentication (OIDC)
+
+Two independent OIDC surfaces: `orchestration.security.authentication.oidc.*`
+(Orchestration Cluster, 8.8+) and `global.identity.auth.*` (Management Identity
++ Console/Web Modeler/Optimize, all releases). Both may be needed at once; the
+chart reads them separately.
+
+8.7 has no inline client secret for the Identity and Optimize clients — flat
+`existingSecret`/`existingSecretKey` only — so those use `field.paths` with
+`inline: null`, and `secretFields()` defaults the mode toggle to existing-secret
+when inline resolves to null.
+
+`global.identity.service.url` satisfies the Console/Web-Modeler-needs-Identity
+rule on the chart's side (`or identity.enabled global.identity.service.url`), so
+both constraints stand down when it is set. Setting the Identity client secret
+under `type: KEYCLOAK` fails the render — mirrored by
+`identityClientSecretWithKeycloak`.
+
+`global.identity.keycloak.url.*` is deliberately NOT exposed: its sub-keys live
+only in `values.schema.extra.json`, so the parser never sees them and validate
+would reject them.
+
 ### Multi-region
 
 The chart cannot compute initial contact points in multi-region mode (it has no way to
