@@ -13,13 +13,13 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import yaml from 'js-yaml'
+import { dumpValues, loadValues } from '../src/yaml.js'
 import { transformAnswers, setNestedValue, cleanObject } from '../src/transform.js'
 import { displayConfig } from '../src/displayConfig.js'
 import { scenarios } from './scenarios.js'
 
 const toYaml = (answers) =>
-  yaml.dump(transformAnswers(answers), { indent: 2, lineWidth: -1 })
+  dumpValues(transformAnswers(answers))
 
 // ─── 1. Golden files ──────────────────────────────────────────────────────────
 
@@ -300,8 +300,8 @@ describe('serialisation', () => {
   it('round-trips every scenario through js-yaml', () => {
     for (const scenario of scenarios) {
       const text = toYaml(scenario.answers)
-      expect(() => yaml.load(text), scenario.name).not.toThrow()
-      expect(yaml.load(text)).toEqual(transformAnswers(scenario.answers))
+      expect(() => loadValues(text), scenario.name).not.toThrow()
+      expect(loadValues(text)).toEqual(transformAnswers(scenario.answers))
     }
   })
 })
