@@ -12,6 +12,7 @@
  */
 
 import { displayConfig } from './displayConfig.js'
+import { flattenLeafPaths } from './objectPaths.js'
 
 // ─── Read a dot-notation path out of a nested object ─────────────────────────
 
@@ -20,19 +21,6 @@ export function getNestedValue(obj, path) {
     if (current === null || current === undefined) return undefined
     return current[key]
   }, obj)
-}
-
-function flattenLeafPaths(obj, parentPath = '') {
-  const result = []
-  for (const [key, value] of Object.entries(obj || {})) {
-    const currentPath = parentPath ? `${parentPath}.${key}` : key
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result.push(...flattenLeafPaths(value, currentPath))
-    } else {
-      result.push(currentPath)
-    }
-  }
-  return result
 }
 
 // ─── Product detection ───────────────────────────────────────────────────────

@@ -42,6 +42,7 @@ import {
   effectiveClusterSize,
 } from "./transform"
 import { importValues } from "./importValues"
+import { compareVersions, canCompare, targetChartLabel, UPGRADE_GUIDE_URL } from "./compareVersions"
 import { CALIBRATION_PROFILES, DEFAULT_CALIBRATION } from "./sizing"
 import { dumpValues, loadValues } from "./yaml"
 // ─── Tooltip icon ──────────────────────────────────────────────────────────────
@@ -405,6 +406,118 @@ function VersionSelector({ current, onChange }) {
   )
 }
 
+// ─── Compare Releases ───────────────────────────────────────────────────────────
+//
+// "I have a values.yaml for one release — what happens if I move it to
+// another?" A chart upgrade can remove a path outright, and the file installs
+// fine while quietly no longer doing what it says. This checks that one thing,
+// mechanically, against every path in the target chart — not just the ~100
+// this tool's own form manages.
+//
+// Deliberately separate from the Import flow above: importing loads a file
+// INTO the form to edit and regenerate; comparing is a one-shot, read-only
+// check against a file the user is not necessarily about to load here at all.
+
+function CompareVersionsPanel({ currentVersion }) {
+  const [open, setOpen] = useState(false)
+  const [target, setTarget] = useState(() => SUPPORTED_VERSIONS.find((c) => c.key !== currentVersion)?.key || DEFAULT_VERSION)
+  const [report, setReport] = useState(null)
+  const fileInputRef = useRef(null)
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    event.target.value = ""
+
+    try {
+      const parsed = loadValues(await file.text())
+      setReport({ fileName: file.name, result: compareVersions(parsed || {}, target) })
+    } catch (error) {
+      setReport({ fileName: file.name, error: error.message })
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="btn-reset" onClick={() => setOpen(true)}>
+        Compare releases
+      </button>
+    )
+  }
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div className="card-accent-bar" />
+        <h2 className="card-title">Compare a values.yaml across releases</h2>
+      </div>
+      <div className="card-body">
+        <p className="import-note" style={{ marginBottom: 12 }}>
+          Upload a values.yaml written for another release and see which of its settings
+          the target chart no longer has. This only checks whether a path still exists —
+          a field that becomes newly required cannot be detected this way; see the{" "}
+          <a href={UPGRADE_GUIDE_URL} target="_blank" rel="noreferrer">official upgrade guide</a>{" "}
+          for those.
+        </p>
+
+        <div className="field-label-row" style={{ marginBottom: 8 }}>
+          <label className="field-label" style={{ margin: 0 }}>Compare against</label>
+        </div>
+        <div className="radio-group" style={{ marginBottom: 16 }}>
+          {SUPPORTED_VERSIONS.filter((chart) => canCompare(chart.key)).map((chart) => (
+            <button
+              key={chart.key}
+              className={`radio-btn ${target === chart.key ? "selected" : ""}`}
+              onClick={() => setTarget(chart.key)}
+            >
+              Camunda {chart.appVersion}
+            </button>
+          ))}
+        </div>
+
+        <input type="file" accept=".yaml,.yml" ref={fileInputRef} onChange={handleFile} style={{ display: "none" }} />
+        <button className="btn-reset" onClick={() => fileInputRef.current?.click()}>
+          Choose values.yaml
+        </button>
+
+        {report?.error && (
+          <div className="error-box" style={{ marginTop: 16 }}>
+            <p className="error-title">Could not read {report.fileName}</p>
+            <p className="error-item">{report.error}</p>
+          </div>
+        )}
+
+        {report?.result && (
+          <div className="import-box" style={{ marginTop: 16 }}>
+            <p className="import-title">
+              {report.result.removedPaths.length === 0 ? "No paths lost" : `${report.result.removedPaths.length} path(s) no longer exist`}
+              {" "}on {targetChartLabel(report.result.targetVersion)}
+            </p>
+            <p className="import-note">
+              Checked {report.result.checkedCount} configured path(s) from {report.fileName}.
+            </p>
+
+            {report.result.removedPaths.length > 0 && (
+              <>
+                <pre className="preview-code">
+                  {report.result.removedPaths
+                    .map((r) => r.path + (r.managedByForm ? "  (this tool has a field for it — reconfigure that section after switching release)" : ""))
+                    .join("\n")}
+                </pre>
+                <p className="preview-caveat">
+                  These keys will be silently ignored after the upgrade — the chart no longer
+                  reads them. Anything not marked above was never managed by this tool's form;
+                  check the official upgrade guide for its replacement, if any.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Theme Selector ────────────────────────────────────────────────────────────
 const THEMES = [
   { id: "dark",    label: "Dark",    icon: "◑" },
@@ -626,6 +739,10 @@ export default function App() {
       </header>
 
       <main className="main-content">
+
+        <div style={{ marginBottom: 20 }}>
+          <CompareVersionsPanel currentVersion={selectedVersion(answers)} />
+        </div>
 
         {/* Product Selection */}
         <div className="card">

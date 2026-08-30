@@ -124,6 +124,31 @@ The releases currently supported share every path the form writes, which is why
 missing 57 of them, so it would need its own display config — that is the line
 where "add another release" stops being free.
 
+## Comparing a values.yaml across releases
+
+`src/compareVersions.js` answers one question, mechanically: for every leaf path
+set in an uploaded values.yaml, does a target chart still have that path at all.
+It is driven by `src/pathIndex.json` — every path in every supported chart, no
+descriptions or defaults, generated alongside the other schemas by
+`npm run parse`. A full schema is ~200KB; the path-only index for two versions
+gzips to ~10KB, which is why it is a separate artifact from `uiSchema.json`
+rather than shipping the full schemas to the browser.
+
+This is deliberately narrower than "will my upgrade work." A path surviving a
+chart bump can still change meaning — optional becoming mandatory is enforced by
+a `required "..."` call inside the chart's Go templates, not declared in
+`values.yaml` or its JSON Schema, and checking it would mean vendoring and
+parsing the chart's templates rather than just its values file. Rather than fake
+that coverage, the UI links Camunda's own upgrade guide
+(`https://docs.camunda.io/docs/self-managed/deployment/helm/upgrade/` — taken
+verbatim from the 8.9 chart's own `constraints.tpl`, not invented) for anything
+beyond path existence.
+
+A removed path the tool's own form manages (tracked via `uiSchema.fields`) is
+flagged distinctly from one the user set by hand — the fix for the former is
+"reconfigure that section after switching release," not "consult the chart
+docs."
+
 ## Multi-region
 
 A dual-region cluster is one logical Zeebe cluster stretched across two

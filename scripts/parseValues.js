@@ -12,10 +12,20 @@
  * Output:  src/schemas/<key>.json   full schema per chart, ~1000 entries.
  *                                   Build-time only - used by npm run validate.
  *
- *          src/uiSchema.json        compact, and the only one the browser loads.
- *                                   Holds the supported versions plus, for each
- *                                   path the form can actually write, its
- *                                   description and which versions have it.
+ *          src/uiSchema.json        compact, and the only one the browser loads
+ *                                   for rendering the form. Holds the supported
+ *                                   versions plus, for each path the form can
+ *                                   write, its description and which versions
+ *                                   have it.
+ *
+ *          src/pathIndex.json       compact, loaded by the browser only when
+ *                                   comparing an uploaded values.yaml across
+ *                                   releases (src/compareVersions.js). Every
+ *                                   path in every chart, with no descriptions,
+ *                                   defaults or types - just enough to answer
+ *                                   "does this release have this path".
+ *                                   A full schema is ~200KB; this is ~20KB
+ *                                   because the strings alone compress well.
  *
  * The split matters: a full schema is ~200KB, so importing one per version
  * would grow the bundle every time a Camunda release is added. The UI only
@@ -31,7 +41,8 @@
  *             └── combined + typed
  *                  |
  *                  ├── schemas/<key>.json  ← npm run validate
- *                  └── uiSchema.json       ← the React UI
+ *                  ├── uiSchema.json       ← the React UI (form + tooltips)
+ *                  └── pathIndex.json      ← the React UI (upgrade compare)
  */
 
 import fs from 'fs'
@@ -135,6 +146,25 @@ for (const chart of charts) {
     `${schema.length} fields, ${Object.keys(comments).length} descriptions\n`,
   )
 }
+
+// ─── Build the path index ─────────────────────────────────────────────────────
+//
+// Every path in every supported chart, so the browser can answer "does release
+// X have this path" for a values.yaml the user uploads - which may set fields
+// this tool's own form never touches. uiSchema only tracks the ~100 paths the
+// form displays, which is not enough for that question.
+
+const pathIndex = Object.fromEntries(
+  charts.map((chart) => [chart.key, schemasByKey[chart.key].map((f) => f.path).sort()]),
+)
+
+const pathIndexPath = path.join(__dirname, '../src/pathIndex.json')
+fs.writeFileSync(pathIndexPath, JSON.stringify(pathIndex, null, 2) + '\n')
+
+process.stdout.write(
+  `[parse] pathIndex.json - ${Object.values(pathIndex).reduce((n, p) => n + p.length, 0)} ` +
+  `path entries across ${charts.length} version(s) (${fs.statSync(pathIndexPath).size.toLocaleString()} bytes)\n`,
+)
 
 // ─── Build the compact UI schema ──────────────────────────────────────────────
 //
