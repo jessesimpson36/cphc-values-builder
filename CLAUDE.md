@@ -125,6 +125,17 @@ selecting RDBMS with Optimize also selected is a constraint violation
 only gate the UI — a direct `transformAnswers` call (tests, the path
 validator) can still hit an impossible combination.
 
+### Gateway API (8.9 only)
+
+`global.gateway.*` doesn't exist before 8.9. Two chart-mirrored constraints:
+`gatewayIncompatibleWithIngress` (confirmed by rendering both enabled - the
+chart itself rejects it) and `gatewayRequires89`. The enable checkbox has a
+real path, so it's auto-hidden on 8.7/8.8 by the generic mechanism; the
+version constraint only matters for the "enabled on 8.9, then switched
+release" leftover-state case. Defaults to referencing an existing Gateway
+(`createGatewayResource: false`), matching the chart default - Gateway API is
+usually one resource a platform team manages centrally.
+
 ### Multi-region
 
 The chart cannot compute initial contact points in multi-region mode (it has no way to

@@ -235,6 +235,31 @@ guards the same rule again before writing anything (`selectedVersion(answers)
 validator among them — cannot produce a file referencing a path the target
 chart doesn't have. That guard is what caught the gap.
 
+## Gateway API (8.9 only)
+
+The Kubernetes Gateway API as an alternative to Ingress, added in Camunda 8.9.
+`global.gateway` does not exist on 8.7 or 8.8 — verified against both schemas,
+the same way as RDBMS.
+
+Two constraints mirror rules the chart enforces at template time:
+`gatewayIncompatibleWithIngress` (confirmed by rendering both enabled: the
+chart itself fails with exactly this message) and `gatewayRequires89`.
+
+Unlike RDBMS's `databaseType` radio, the "Enable Gateway API" checkbox has a
+real chart path (`global.gateway.enabled`), so the generic
+path-availability mechanism already hides it on 8.7/8.8 — a user there never
+sees the option at all, the same way OIDC disappears there. The
+`gatewayRequires89` constraint is still needed for one specific path: a user
+enables it on 8.9, then switches the release selector down to 8.7 or 8.8. The
+checkbox vanishes, but the answer persists in state (the same resilience the
+tool relies on everywhere else), so the constraint catches it at generate time
+rather than silently dropping it.
+
+Defaults to `createGatewayResource: false` — referencing an existing shared
+Gateway — matching the chart's own default rather than assuming this release
+should create its own. Gateway API is commonly one Gateway a platform team
+manages centrally, with many releases attaching routes to it.
+
 ## Multi-region
 
 A dual-region cluster is one logical Zeebe cluster stretched across two
