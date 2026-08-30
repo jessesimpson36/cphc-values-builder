@@ -115,6 +115,10 @@ To revise an existing deployment, use **Import values.yaml** in the header rathe
 than filling the form in again. Anything the form cannot represent is listed so
 you can carry it across by hand.
 
+Before upgrading Camunda versions, use **Compare releases** to check your current
+values.yaml against the target chart. It flags any configured path the new chart
+has dropped — the class of bug that installs cleanly and then quietly does nothing.
+
 ## Project Structure
 
 ```
