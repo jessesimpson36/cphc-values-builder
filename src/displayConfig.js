@@ -10,15 +10,75 @@
  * happen here only.
  *
  * Structure:
- *   products  — list of selectable Camunda products
- *   sections  — list of form sections, each with a showIf condition
- *     fields  — list of inputs, each mapping to a Helm values path
+ *   products    — list of selectable Camunda products
+ *   sections    — list of form sections, each with a showIf condition
+ *     fields    — list of inputs, each mapping to a Helm values path.
+ *                 A field may carry its own showIf for within-section branching
+ *                 (used by the secret-mode toggles and the document store).
+ *   constraints — cross-product rules the chart enforces at template time.
+ *                 Checked before generating so the user sees the problem here
+ *                 rather than in a failed `helm install`.
  *
  * To add a new field:
  *   1. Find the path in schema.json by searching for a keyword
  *   2. Add a field entry to the relevant section below
- *   3. Save — the UI updates automatically
+ *   3. Run `npm run validate` to confirm the path exists in the chart
+ *   4. Save — the UI updates automatically
+ *
+ * Hidden fields (section showIf false, or field showIf false) are never read by
+ * transform.js, so stale answers cannot leak into the generated file.
  */
+
+// Secret inputs offer two modes. Inline writes the value straight into the
+// generated YAML, which is convenient for a trial cluster and wrong for a real
+// one; existingSecret references a Kubernetes Secret the user creates outside
+// this tool. The literals below are compared against in field showIf conditions.
+const INLINE = 'Inline value'
+const EXISTING = 'Existing secret'
+const SECRET_MODES = [INLINE, EXISTING]
+
+// Builds the three fields that make up one credential input: the mode toggle,
+// the inline value, and the existing-secret reference. `base` is the path of
+// the secret object in the chart, e.g. 'global.elasticsearch.auth.secret'.
+function secretFields(idPrefix, base, label, { required = false } = {}) {
+  const modeId = `${idPrefix}_secret_mode`
+  const mode = (answers) => answers[modeId] || INLINE
+
+  return [
+    {
+      id: modeId,
+      path: null,
+      label: `${label} source`,
+      type: 'radio',
+      options: SECRET_MODES,
+      required: false,
+    },
+    {
+      id: idPrefix,
+      path: `${base}.inlineSecret`,
+      label,
+      type: 'password',
+      required,
+      showIf: (answers) => mode(answers) === INLINE,
+    },
+    {
+      id: `${idPrefix}_existing_secret`,
+      path: `${base}.existingSecret`,
+      label: 'Existing secret name',
+      type: 'text',
+      required,
+      showIf: (answers) => mode(answers) === EXISTING,
+    },
+    {
+      id: `${idPrefix}_existing_secret_key`,
+      path: `${base}.existingSecretKey`,
+      label: 'Key within the secret',
+      type: 'text',
+      required,
+      showIf: (answers) => mode(answers) === EXISTING,
+    },
+  ]
+}
 
 export const displayConfig = {
 
@@ -46,6 +106,7 @@ export const displayConfig = {
   //   type      — text | password | radio | checkbox | env_vars
   //   options   — (radio only) list of options
   //   required  — whether the field must be filled before generating
+  //   showIf    — optional; hides the field within an otherwise visible section
 
   sections: [
 
@@ -120,7 +181,7 @@ export const displayConfig = {
         answers.databaseType === 'elasticsearch',
       fields: [
         { id: 'es_username', path: 'global.elasticsearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        { id: 'es_password', path: 'global.elasticsearch.auth.secret.inlineSecret', label: 'Password',   type: 'password', required: true  },
+        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', { required: true }),
         { id: 'es_protocol', path: 'global.elasticsearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'es_host',     path: 'global.elasticsearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'es_port',     path: 'global.elasticsearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -139,7 +200,7 @@ export const displayConfig = {
         answers.databaseType === 'opensearch',
       fields: [
         { id: 'os_username', path: 'global.opensearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        { id: 'os_password', path: 'global.opensearch.auth.secret.inlineSecret', label: 'Password',   type: 'password', required: true  },
+        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', { required: true }),
         { id: 'os_protocol', path: 'global.opensearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'os_host',     path: 'global.opensearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'os_port',     path: 'global.opensearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -159,7 +220,7 @@ export const displayConfig = {
         answers.databaseType === 'elasticsearch',
       fields: [
         { id: 'es_username', path: 'global.elasticsearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        { id: 'es_password', path: 'global.elasticsearch.auth.secret.inlineSecret', label: 'Password',   type: 'password', required: true  },
+        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', { required: true }),
         { id: 'es_protocol', path: 'global.elasticsearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'es_host',     path: 'global.elasticsearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'es_port',     path: 'global.elasticsearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -179,7 +240,7 @@ export const displayConfig = {
         answers.databaseType === 'opensearch',
       fields: [
         { id: 'os_username', path: 'global.opensearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        { id: 'os_password', path: 'global.opensearch.auth.secret.inlineSecret', label: 'Password',   type: 'password', required: true  },
+        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', { required: true }),
         { id: 'os_protocol', path: 'global.opensearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'os_host',     path: 'global.opensearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'os_port',     path: 'global.opensearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -196,7 +257,7 @@ export const displayConfig = {
         { id: 'identity_db_host',     path: 'identity.externalDatabase.host',                label: 'Host',          type: 'text',     required: true  },
         { id: 'identity_db_port',     path: 'identity.externalDatabase.port',                label: 'Port',          type: 'text',     required: true  },
         { id: 'identity_db_username', path: 'identity.externalDatabase.username',            label: 'Username',      type: 'text',     required: true  },
-        { id: 'identity_db_password', path: 'identity.externalDatabase.secret.inlineSecret', label: 'Password',      type: 'password', required: true  },
+        ...secretFields('identity_db_password', 'identity.externalDatabase.secret', 'Password', { required: true }),
         { id: 'identity_db_name',     path: 'identity.externalDatabase.database',            label: 'Database Name', type: 'text',     required: true  },
       ]
     },
@@ -210,8 +271,238 @@ export const displayConfig = {
         { id: 'wm_db_host',     path: 'webModeler.restapi.externalDatabase.host',                  label: 'Host',          type: 'text',     required: true  },
         { id: 'wm_db_port',     path: 'webModeler.restapi.externalDatabase.port',                  label: 'Port',          type: 'text',     required: true  },
         { id: 'wm_db_user',     path: 'webModeler.restapi.externalDatabase.user',                  label: 'Username',      type: 'text',     required: true  },
-        { id: 'wm_db_password', path: 'webModeler.restapi.externalDatabase.secret.inlineSecret',   label: 'Password',      type: 'password', required: true  },
+        ...secretFields('wm_db_password', 'webModeler.restapi.externalDatabase.secret', 'Password', { required: true }),
         { id: 'wm_db_name',     path: 'webModeler.restapi.externalDatabase.database',              label: 'Database Name', type: 'text',     required: true  },
+      ]
+    },
+
+    // ── Enterprise License ─────────────────────────────────────────────────────
+    // Self-managed installations run in trial mode without a license key.
+    {
+      id: 'license',
+      title: 'Enterprise License',
+      showIf: (answers) => answers.products.length > 0,
+      fields: secretFields('license', 'global.license.secret', 'License key'),
+    },
+
+    // ── Web Modeler SMTP ───────────────────────────────────────────────────────
+    // fromAddress is mandatory: the chart calls `required` on it and refuses to
+    // render the Web Modeler configmap without it. Omitting this section is why
+    // a generated file with Web Modeler selected used to fail `helm install`.
+    {
+      id: 'webModelerMail',
+      title: 'Web Modeler Email (SMTP)',
+      showIf: (answers) => answers.products.includes('webModeler'),
+      fields: [
+        { id: 'wm_mail_from_address', path: 'webModeler.restapi.mail.fromAddress',    label: 'From address',      type: 'text',     required: true  },
+        { id: 'wm_mail_from_name',    path: 'webModeler.restapi.mail.fromName',       label: 'From name',         type: 'text',     required: false },
+        { id: 'wm_smtp_host',         path: 'webModeler.restapi.mail.smtpHost',       label: 'SMTP host',         type: 'text',     required: false },
+        { id: 'wm_smtp_port',         path: 'webModeler.restapi.mail.smtpPort',       label: 'SMTP port',         type: 'text',     required: false },
+        { id: 'wm_smtp_user',         path: 'webModeler.restapi.mail.smtpUser',       label: 'SMTP username',     type: 'text',     required: false },
+        { id: 'wm_smtp_tls',          path: 'webModeler.restapi.mail.smtpTlsEnabled', label: 'Enforce STARTTLS',  type: 'checkbox', required: false },
+        ...secretFields('wm_smtp_password', 'webModeler.restapi.mail.secret', 'SMTP password'),
+      ]
+    },
+
+    // ── Authentication ─────────────────────────────────────────────────────────
+    // The chart ships with basic auth. Anything beyond a trial cluster uses an
+    // external OIDC provider instead.
+    {
+      id: 'authentication',
+      title: 'Authentication',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        {
+          id: 'auth_method',
+          path: 'global.security.authentication.method',
+          label: 'Authentication method',
+          type: 'radio',
+          options: ['basic', 'oidc'],
+          required: false,
+        },
+      ]
+    },
+
+    // ── OIDC ───────────────────────────────────────────────────────────────────
+    {
+      id: 'oidc',
+      title: 'OIDC Provider',
+      showIf: (answers) =>
+        answers.products.includes('orchestration') && answers.auth_method === 'oidc',
+      fields: [
+        { id: 'oidc_type',           path: 'orchestration.security.authentication.oidc.type',          label: 'Provider type',   type: 'radio', options: ['KEYCLOAK', 'ENTRA', 'GENERIC'], required: true },
+        { id: 'oidc_issuer',         path: 'orchestration.security.authentication.oidc.issuer',        label: 'Issuer URL',      type: 'text', required: true  },
+        { id: 'oidc_client_id',      path: 'orchestration.security.authentication.oidc.clientId',      label: 'Client ID',       type: 'text', required: true  },
+        { id: 'oidc_audience',       path: 'orchestration.security.authentication.oidc.audience',      label: 'Audience',        type: 'text', required: false },
+        { id: 'oidc_redirect_url',   path: 'orchestration.security.authentication.oidc.redirectUrl',   label: 'Redirect URL',    type: 'text', required: false },
+        { id: 'oidc_username_claim', path: 'orchestration.security.authentication.oidc.usernameClaim', label: 'Username claim',  type: 'text', required: false },
+        { id: 'oidc_groups_claim',   path: 'orchestration.security.authentication.oidc.groupsClaim',   label: 'Groups claim',    type: 'text', required: false },
+        ...secretFields('oidc_client_secret', 'orchestration.security.authentication.oidc.secret', 'Client secret', { required: true }),
+      ]
+    },
+
+    // ── Cluster Sizing ─────────────────────────────────────────────────────────
+    // Chart defaults are 3 brokers / 3 partitions, which the published Camunda
+    // benchmark saturates at roughly 240 process instances per second. Sizing
+    // beyond that means changing partition count, which cannot be done by
+    // editing values.yaml after go-live without a cluster scaling procedure —
+    // so it is worth getting right at install time. See src/sizing.js.
+    {
+      id: 'sizing',
+      title: 'Cluster Sizing',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        {
+          id: 'sizing_mode',
+          path: null,
+          label: 'How should the cluster be sized?',
+          type: 'radio',
+          options: ['Chart defaults', 'Throughput target', 'Manual'],
+          required: false,
+        },
+        {
+          id: 'target_pi_per_second',
+          path: null,
+          label: 'Target process instances per second',
+          type: 'text',
+          required: true,
+          showIf: (answers) => answers.sizing_mode === 'Throughput target',
+        },
+        {
+          id: 'tasks_per_instance',
+          path: null,
+          label: 'Tasks per process instance (Camunda suggests 10 if unknown)',
+          type: 'text',
+          required: false,
+          showIf: (answers) => answers.sizing_mode === 'Throughput target',
+        },
+        {
+          id: 'sizing_calibration',
+          path: null,
+          label: 'Calibration',
+          type: 'radio',
+          options: ['conservative', 'balanced', 'optimistic'],
+          required: false,
+          showIf: (answers) => answers.sizing_mode === 'Throughput target',
+        },
+        {
+          id: 'vcpu_per_broker',
+          path: null,
+          label: 'vCPU per broker',
+          type: 'text',
+          required: false,
+          placeholder: '8',
+          showIf: (answers) => answers.sizing_mode === 'Throughput target',
+        },
+        // Manual mode writes these paths directly. Throughput mode computes them
+        // in transform.js and ignores whatever is typed here.
+        { id: 'cluster_size',       path: 'orchestration.clusterSize',       label: 'Broker count (clusterSize)', type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'partition_count',    path: 'orchestration.partitionCount',    label: 'Partition count',            type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'replication_factor', path: 'orchestration.replicationFactor', label: 'Replication factor',         type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'pvc_size',           path: 'orchestration.pvcSize',           label: 'Disk per broker',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'storage_class',      path: 'orchestration.pvcStorageClassName', label: 'Storage class',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode !== 'Chart defaults' },
+        { id: 'cpu_request',        path: 'orchestration.resources.requests.cpu',    label: 'CPU request',    type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'cpu_limit',          path: 'orchestration.resources.limits.cpu',      label: 'CPU limit',      type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'memory_request',     path: 'orchestration.resources.requests.memory', label: 'Memory request', type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'memory_limit',       path: 'orchestration.resources.limits.memory',   label: 'Memory limit',   type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+      ]
+    },
+
+    // ── Multi-region ───────────────────────────────────────────────────────────
+    // A dual-region cluster is one logical Zeebe cluster stretched across two
+    // Kubernetes clusters. Each region is installed from its own values.yaml
+    // that differs only in regionId, so generate this file once per region.
+    //
+    // The chart cannot compute initial contact points itself in this mode (it
+    // says so in orchestration/files/_application.yaml) because it has no way to
+    // know the other region's namespace. transform.js builds the full broker
+    // list from the namespaces given below.
+    {
+      id: 'multiRegion',
+      title: 'Multi-region',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        {
+          id: 'multiregion_enabled',
+          path: null,
+          label: 'Stretch this cluster across multiple regions',
+          type: 'checkbox',
+          required: false,
+        },
+      ]
+    },
+
+    {
+      id: 'multiRegionConfig',
+      title: 'Multi-region Configuration',
+      showIf: (answers) =>
+        answers.products.includes('orchestration') && answers.multiregion_enabled === true,
+      fields: [
+        {
+          id: 'multiregion_region_id',
+          // Written by transform.js, not mapped directly: the chart's JSON
+          // schema types regionId as a number and radio answers are strings.
+          path: null,
+          label: 'Region ID of THIS installation (0-based)',
+          type: 'radio',
+          options: ['0', '1'],
+          required: true,
+        },
+        {
+          id: 'multiregion_namespaces',
+          path: null,
+          label: 'Namespace per region, in region order',
+          type: 'string_list',
+          required: true,
+          placeholder: 'camunda-region-0',
+        },
+        {
+          id: 'multiregion_release_name',
+          path: null,
+          label: 'Helm release name (used to build broker DNS names)',
+          type: 'text',
+          required: true,
+          placeholder: 'camunda',
+        },
+        {
+          id: 'multiregion_cluster_domain',
+          path: null,
+          label: 'Kubernetes cluster domain',
+          type: 'text',
+          required: false,
+          placeholder: 'cluster.local',
+        },
+      ]
+    },
+
+    // ── Document Store ─────────────────────────────────────────────────────────
+    // Documents uploaded through forms need somewhere to live. The default is
+    // in-memory, which loses every document on pod restart — fine for a trial,
+    // never for production.
+    {
+      id: 'documentStore',
+      title: 'Document Store',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        {
+          id: 'document_store_type',
+          path: null,
+          label: 'Where should uploaded documents be stored?',
+          type: 'radio',
+          options: ['In-memory', 'AWS S3', 'GCP Cloud Storage'],
+          required: false,
+        },
+        { id: 'doc_aws_bucket',     path: 'global.documentStore.type.aws.bucket',      label: 'S3 bucket',       type: 'text',     required: true,  showIf: (a) => a.document_store_type === 'AWS S3' },
+        { id: 'doc_aws_region',     path: 'global.documentStore.type.aws.region',      label: 'AWS region',      type: 'text',     required: true,  showIf: (a) => a.document_store_type === 'AWS S3' },
+        { id: 'doc_aws_path',       path: 'global.documentStore.type.aws.bucketPath',  label: 'Path prefix',     type: 'text',     required: false, showIf: (a) => a.document_store_type === 'AWS S3' },
+        { id: 'doc_aws_irsa',       path: 'global.documentStore.type.aws.irsa.enabled', label: 'Authenticate with IRSA instead of keys', type: 'checkbox', required: false, showIf: (a) => a.document_store_type === 'AWS S3' },
+        ...secretFields('doc_aws_access_key', 'global.documentStore.type.aws.accessKeyId.secret', 'AWS access key ID')
+          .map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
+        ...secretFields('doc_aws_secret_key', 'global.documentStore.type.aws.secretAccessKey.secret', 'AWS secret access key')
+          .map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
+        { id: 'doc_gcp_bucket',        path: 'global.documentStore.type.gcp.bucket',                label: 'GCS bucket',                type: 'text', required: true,  showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
+        { id: 'doc_gcp_secret',        path: 'global.documentStore.type.gcp.secret.existingSecret', label: 'Service account secret name', type: 'text', required: true, showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
+        { id: 'doc_gcp_secret_key',    path: 'global.documentStore.type.gcp.secret.existingSecretKey', label: 'Key within the secret',  type: 'text', required: false, showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
       ]
     },
 
@@ -319,23 +610,15 @@ export const displayConfig = {
     },
 
     // ── Web Modeler Environment Variables ──────────────────────────────────────
-    // webModeler has three sub-components each with their own env vars.
-    // restapi is the backend, webapp is the frontend, websockets handles live updates.
+    // webModeler exposes env vars on two sub-components: restapi is the backend,
+    // websockets handles live updates. The separate `webapp` sub-chart was folded
+    // into restapi upstream, so webModeler.webapp.env no longer exists.
     {
       id: 'webModelerRestapiEnv',
       title: 'Web Modeler REST API Environment Variables',
       showIf: (answers) => answers.products.includes('webModeler'),
       fields: [
         { id: 'webModeler_restapi_env', path: 'webModeler.restapi.env', label: 'Environment Variables', type: 'env_vars', required: false }
-      ]
-    },
-
-    {
-      id: 'webModelerWebappEnv',
-      title: 'Web Modeler Web App Environment Variables',
-      showIf: (answers) => answers.products.includes('webModeler'),
-      fields: [
-        { id: 'webModeler_webapp_env', path: 'webModeler.webapp.env', label: 'Environment Variables', type: 'env_vars', required: false }
       ]
     },
 
@@ -368,5 +651,92 @@ export const displayConfig = {
       ]
     },
 
-  ]
+    ],
+
+  // ─── Constraints ────────────────────────────────────────────────────────────
+  //
+  // Rules the chart enforces at template time, checked here so the user sees
+  // the problem in the form rather than in a failed `helm install`. Each entry
+  // returns true when the configuration is INVALID.
+  //
+  // Keep these in sync with templates/common/constraints.tpl in the chart.
+
+  constraints: [
+    {
+      id: 'consoleNeedsIdentity',
+      message: 'Console requires Management Identity. Select Identity as well, or point Console at an external Identity instance.',
+      violated: (answers) =>
+        answers.products.includes('console') && !answers.products.includes('identity'),
+    },
+    {
+      id: 'webModelerNeedsIdentity',
+      message: 'Web Modeler requires Management Identity. Select Identity as well, or point Web Modeler at an external Identity instance.',
+      violated: (answers) =>
+        answers.products.includes('webModeler') && !answers.products.includes('identity'),
+    },
+    {
+      id: 'multiregionNamespaceCount',
+      message: 'Give one namespace per region — a dual-region cluster needs exactly two.',
+      violated: (answers) =>
+        answers.multiregion_enabled === true &&
+        (answers.multiregion_namespaces || []).filter(Boolean).length < 2,
+    },
+    {
+      id: 'multiregionRegionIdInRange',
+      message: 'Region ID must identify one of the namespaces listed above.',
+      violated: (answers) => {
+        if (answers.multiregion_enabled !== true) return false
+        const namespaces = (answers.multiregion_namespaces || []).filter(Boolean)
+        if (namespaces.length === 0) return false
+        return Number(answers.multiregion_region_id) >= namespaces.length
+      },
+    },
+    {
+      // Only reachable in manual mode: every other path rounds the broker count
+      // up to a multiple of the region count automatically. Left in place so a
+      // hand-entered odd number is rejected rather than silently corrected.
+      id: 'multiregionEvenClusterSize',
+      message: 'Broker count must divide evenly across the regions — the chart runs clusterSize / regions brokers in each.',
+      violated: (answers) => {
+        if (answers.multiregion_enabled !== true) return false
+        if (answers.sizing_mode !== 'Manual') return false
+        const regions = (answers.multiregion_namespaces || []).filter(Boolean).length
+        const size = Number(answers.cluster_size)
+        if (!regions || !Number.isFinite(size) || size === 0) return false
+        return size % regions !== 0
+      },
+    },
+    {
+      id: 'multiregionNeedsElasticsearch',
+      message: 'A multi-region cluster needs an external Elasticsearch or OpenSearch reachable from both regions.',
+      violated: (answers) =>
+        answers.multiregion_enabled === true && !answers.databaseType,
+    },
+  ],
+}
+
+// ─── Visibility helpers ──────────────────────────────────────────────────────
+//
+// The UI, the validator and transform.js must agree exactly on what is visible:
+// a field the user cannot see must not be required, and must not be written to
+// the output. Sharing these two functions is what keeps them in step.
+
+export function visibleSections(answers) {
+  return displayConfig.sections.filter((section) => section.showIf(answers))
+}
+
+export function isFieldVisible(field, answers) {
+  return !field.showIf || field.showIf(answers)
+}
+
+export function visibleFields(answers) {
+  return visibleSections(answers).flatMap((section) =>
+    section.fields
+      .filter((field) => isFieldVisible(field, answers))
+      .map((field) => ({ section, field })),
+  )
+}
+
+export function violatedConstraints(answers) {
+  return displayConfig.constraints.filter((constraint) => constraint.violated(answers))
 }

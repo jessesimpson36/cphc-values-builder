@@ -680,3 +680,172 @@
   border: 6px solid transparent;
   border-top-color: var(--card-border);
 }
+/* ─── String List Editor ─────────────────────────────────────────────────── */
+
+.string-list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.string-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The index is the region ID in multi-region, so it is shown, not implied. */
+.string-list-index {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background-color: var(--selected-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.string-list-row .field-input {
+  flex: 1;
+}
+
+.btn-remove-env:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ─── Preview panels ─────────────────────────────────────────────────────── */
+
+.preview-panel {
+  margin: -8px 0 20px;
+  border-radius: 12px;
+  border: 1px solid var(--accent);
+  background-color: var(--card-bg);
+  padding: 16px 24px;
+}
+
+.preview-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.preview-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preview-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.preview-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 4px 0;
+}
+
+/* Sizing output is an estimate; the caveat must not be easy to miss. */
+.preview-caveat {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-border);
+}
+
+.preview-code {
+  margin: 8px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: var(--yaml-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ─── Import report ──────────────────────────────────────────────────────── */
+
+.import-box {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--success);
+  background-color: var(--card-bg);
+  padding: 16px 24px;
+}
+
+.import-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--success);
+  margin-bottom: 8px;
+}
+
+.import-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 4px 0;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+
+/* The chart version the output targets - without it the user cannot tell
+   whether a generated file applies to the chart they are installing. */
+.app-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--card-border);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.app-footer code {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background-color: var(--yaml-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}

@@ -7,13 +7,15 @@
  * The output of this module is passed to yaml.dump() in App.jsx, which
  * serialises it to the final YAML string.
  *
- * Three steps in order:
+ * Four steps in order:
  *   1. applyProductFlags  — set enabled/disabled and database flags automatically
- *   2. mapFieldsToHelm    — map user answers to their dot-notation Helm paths
- *   3. cleanObject        — remove empty, null, and undefined values
+ *   2. applyDerivedValues — sizing, multi-region topology, document store
+ *   3. mapFieldsToHelm    — map user answers to their dot-notation Helm paths
+ *   4. cleanObject        — remove empty, null, and undefined values
  */
 
-import { displayConfig } from "./displayConfig"
+import { displayConfig, isFieldVisible } from "./displayConfig.js"
+import { calculateSizing } from "./sizing.js"
 
 // ─── Utility: set a value in a nested object using a dot-notation path ────────
 export function setNestedValue(obj, path, value) {
@@ -86,12 +88,12 @@ function applyProductFlags(helmValues, answers) {
   helmValues = setNestedValue(helmValues, "console.enabled", selected.includes("console"))
 
   // ── Cluster type flags ─────────────────────────────────────────────────────
-  if (answers.clusterType === 'AWS EKS' && answers.databaseType === 'opensearch') {
+  if (answers.isAwsEks && answers.databaseType === 'opensearch') {
     // Enable AWS IRSA (IAM Roles for Service Accounts) for OpenSearch.
     // Only set when OpenSearch is selected — irrelevant for Elasticsearch.
     helmValues = setNestedValue(helmValues, 'global.opensearch.aws.enabled', true)
   }
-  if (answers.clusterType === 'OpenShift') {
+  if (answers.isOpenShift) {
     // Force security context adaptation for OpenShift restricted-v2 SCC.
     // Must be set on the top-level chart AND each sub-chart that has its own
     // compatibility block — otherwise sub-charts like PostgreSQL and Elasticsearch
@@ -140,6 +142,205 @@ function applyProductFlags(helmValues, answers) {
   return helmValues
 }
 
+// ─── Cluster sizing ───────────────────────────────────────────────────────────
+//
+// clusterSize, partitionCount and replicationFactor are typed as STRINGS in the
+// chart's values.schema.json. Emitting them as numbers makes helm reject the
+// file outright, so every value here is stringified on the way out.
+
+export function resolveSizing(answers) {
+  const regions = multiregionRegions(answers)
+
+  if (answers.sizing_mode === "Throughput target") {
+    return calculateSizing({
+      processInstancesPerSecond: answers.target_pi_per_second,
+      tasksPerInstance: answers.tasks_per_instance || undefined,
+      calibration: answers.sizing_calibration || undefined,
+      vcpuPerBroker: Number(answers.vcpu_per_broker) || undefined,
+      regions,
+    })
+  }
+
+  if (answers.sizing_mode === "Manual") {
+    const size = Number(answers.cluster_size)
+    if (!Number.isFinite(size) || size <= 0) return null
+    return {
+      clusterSize: size,
+      partitionCount: Number(answers.partition_count) || size,
+      replicationFactor: Number(answers.replication_factor) || Math.min(3, size),
+    }
+  }
+
+  return null
+}
+
+function applySizing(helmValues, answers) {
+  const sizing = resolveSizing(answers)
+  if (!sizing) return helmValues
+
+  // Manual mode already writes these through displayConfig paths; only the
+  // computed modes need to set them here.
+  if (answers.sizing_mode !== "Throughput target") return helmValues
+
+  helmValues = setNestedValue(helmValues, "orchestration.clusterSize", String(sizing.clusterSize))
+  helmValues = setNestedValue(helmValues, "orchestration.partitionCount", String(sizing.partitionCount))
+  helmValues = setNestedValue(helmValues, "orchestration.replicationFactor", String(sizing.replicationFactor))
+  helmValues = setNestedValue(helmValues, "orchestration.pvcSize", sizing.pvcSize)
+  helmValues = setNestedValue(helmValues, "orchestration.resources.requests.cpu", sizing.resources.requests.cpu)
+  helmValues = setNestedValue(helmValues, "orchestration.resources.requests.memory", sizing.resources.requests.memory)
+  helmValues = setNestedValue(helmValues, "orchestration.resources.limits.cpu", sizing.resources.limits.cpu)
+  helmValues = setNestedValue(helmValues, "orchestration.resources.limits.memory", sizing.resources.limits.memory)
+
+  return helmValues
+}
+
+// ─── Multi-region ─────────────────────────────────────────────────────────────
+//
+// A dual-region cluster is a single Zeebe cluster stretched across two
+// Kubernetes clusters. The chart runs clusterSize / regions brokers per region
+// and derives each broker's node ID as (podIndex * regions + regionId), so the
+// brokers interleave across regions rather than sitting in contiguous blocks.
+//
+// In this mode the chart cannot generate the initial contact point list itself
+// — it has no way to know the other region's namespace — and says so in
+// templates/orchestration/files/_application.yaml. We build the full list of
+// fully-qualified broker addresses across every region and pass it through the
+// documented environment variable.
+
+const INTERNAL_API_PORT = 26502
+const DEFAULT_CLUSTER_DOMAIN = "cluster.local"
+const CONTACT_POINTS_ENV = "CAMUNDA_CLUSTER_INITIALCONTACTPOINTS"
+
+// The chart names the orchestration StatefulSet and its headless service
+// "<release>-zeebe" — the component is still called zeebe internally for
+// backward compatibility between 8.7 and 8.8.
+const brokerServiceName = (releaseName) => `${releaseName}-zeebe`
+
+export function multiregionNamespaces(answers) {
+  if (answers.multiregion_enabled !== true) return []
+  return (answers.multiregion_namespaces || []).map((n) => (n || "").trim()).filter(Boolean)
+}
+
+export function multiregionRegions(answers) {
+  const namespaces = multiregionNamespaces(answers)
+  return namespaces.length > 1 ? namespaces.length : 1
+}
+
+/**
+ * Every broker address in the stretched cluster, in region-major order.
+ * Exported so the UI can show the user exactly what will be generated.
+ */
+export function buildInitialContactPoints(answers, clusterSize) {
+  const namespaces = multiregionNamespaces(answers)
+  if (namespaces.length < 2) return []
+
+  const releaseName = (answers.multiregion_release_name || "camunda").trim()
+  const domain = (answers.multiregion_cluster_domain || DEFAULT_CLUSTER_DOMAIN).trim()
+  const service = brokerServiceName(releaseName)
+  const perRegion = Math.max(1, Math.floor(clusterSize / namespaces.length))
+
+  const points = []
+  for (const namespace of namespaces) {
+    for (let podIndex = 0; podIndex < perRegion; podIndex++) {
+      points.push(`${service}-${podIndex}.${service}.${namespace}.svc.${domain}:${INTERNAL_API_PORT}`)
+    }
+  }
+
+  return points
+}
+
+// The chart's default clusterSize is 3, and it computes per-region replicas with
+// integer division: 3 / 2 regions runs ONE broker per region while the brokers
+// still believe they are in a cluster of three. The cluster never forms a
+// quorum. So in multi-region the broker count is always written explicitly,
+// rounded up to a multiple of the region count.
+const CHART_DEFAULT_CLUSTER_SIZE = 3
+
+export function effectiveClusterSize(answers) {
+  const sizing = resolveSizing(answers)
+  const requested = sizing ? Number(sizing.clusterSize) : CHART_DEFAULT_CLUSTER_SIZE
+  const regions = multiregionRegions(answers)
+
+  if (regions < 2) return requested
+  return requested % regions === 0
+    ? requested
+    : requested + (regions - (requested % regions))
+}
+
+function applyMultiregion(helmValues, answers) {
+  const namespaces = multiregionNamespaces(answers)
+  if (namespaces.length < 2) return helmValues
+
+  const regions = namespaces.length
+  const regionId = Number(answers.multiregion_region_id) || 0
+
+  helmValues = setNestedValue(helmValues, "global.multiregion.regions", regions)
+  helmValues = setNestedValue(helmValues, "global.multiregion.regionId", regionId)
+
+  const clusterSize = effectiveClusterSize(answers)
+
+  // Written unconditionally: leaving it to the chart default would produce the
+  // broken topology described above, and the contact point list below must
+  // describe exactly the brokers that will exist.
+  helmValues = setNestedValue(helmValues, "orchestration.clusterSize", String(clusterSize))
+
+  // Replication factor 4 is Camunda's requirement for dual-region so a quorum
+  // survives losing a region — but never more than the number of brokers.
+  if (!helmValues.orchestration?.replicationFactor) {
+    helmValues = setNestedValue(
+      helmValues,
+      "orchestration.replicationFactor",
+      String(Math.min(4, clusterSize)),
+    )
+  }
+
+  const contactPoints = buildInitialContactPoints(answers, clusterSize)
+  if (contactPoints.length === 0) return helmValues
+
+  // Prepend rather than replace: the user may have added their own env vars.
+  const existing = helmValues.orchestration?.env || []
+  helmValues = setNestedValue(helmValues, "orchestration.env", [
+    { name: CONTACT_POINTS_ENV, value: contactPoints.join(",") },
+    ...existing.filter((entry) => entry.name !== CONTACT_POINTS_ENV),
+  ])
+
+  return helmValues
+}
+
+// ─── Document store ───────────────────────────────────────────────────────────
+//
+// Exactly one store is active. activeStoreId must match the storeId of the
+// enabled type, and the types the user did not pick must be switched off — the
+// in-memory store is enabled by default in the chart and would otherwise stay on.
+
+const DOCUMENT_STORES = {
+  "In-memory": { key: "inmemory", storeId: "INMEMORY" },
+  "AWS S3": { key: "aws", storeId: "AWS" },
+  "GCP Cloud Storage": { key: "gcp", storeId: "GCP" },
+}
+
+function applyDocumentStore(helmValues, answers) {
+  const selected = DOCUMENT_STORES[answers.document_store_type]
+  if (!selected) return helmValues
+
+  for (const { key } of Object.values(DOCUMENT_STORES)) {
+    helmValues = setNestedValue(helmValues, `global.documentStore.type.${key}.enabled`, key === selected.key)
+  }
+  helmValues = setNestedValue(helmValues, "global.documentStore.activeStoreId", selected.storeId)
+
+  return helmValues
+}
+
+// ─── Derived values ───────────────────────────────────────────────────────────
+
+function applyDerivedValues(helmValues, answers) {
+  if (answers.products.includes("orchestration")) {
+    helmValues = applySizing(helmValues, answers)
+    helmValues = applyDocumentStore(helmValues, answers)
+  }
+  return helmValues
+}
+
 // ─── Map user answers to helm values paths ────────────────────────────────────
 function mapFieldsToHelm(helmValues, answers) {
   const visibleSections = displayConfig.sections.filter((s) => s.showIf(answers))
@@ -147,6 +348,10 @@ function mapFieldsToHelm(helmValues, answers) {
   for (const section of visibleSections) {
     for (const field of section.fields) {
       if (!field.path) continue
+
+      // A field hidden inside a visible section is just as hidden as one in a
+      // collapsed section — its answer must not reach the output.
+      if (!isFieldVisible(field, answers)) continue
 
       // env_vars type — convert to YAML array of { name, value } objects
       if (field.type === "env_vars") {
@@ -156,6 +361,15 @@ function mapFieldsToHelm(helmValues, answers) {
           .map((row) => ({ name: row.name, value: row.value }))
         if (envArray.length > 0) {
           helmValues = setNestedValue(helmValues, field.path, envArray)
+        }
+        continue
+      }
+
+      // string_list — drop blank rows, omit the key entirely if none remain
+      if (field.type === "string_list") {
+        const items = (answers[field.id] || []).map((item) => (item || "").trim()).filter(Boolean)
+        if (items.length > 0) {
+          helmValues = setNestedValue(helmValues, field.path, items)
         }
         continue
       }
@@ -182,9 +396,18 @@ export function transformAnswers(answers) {
   // Step 1: apply automatic product flags (enabled/disabled for all products)
   helmValues = applyProductFlags(helmValues, answers)
 
-  // Step 2: map user filled fields to their yaml paths
+  // Step 2: values derived from a target rather than typed in directly
+  helmValues = applyDerivedValues(helmValues, answers)
+
+  // Step 3: map user filled fields to their yaml paths
   helmValues = mapFieldsToHelm(helmValues, answers)
 
-  // Step 3: remove any empty values
+  // Step 4: multi-region runs after field mapping so the generated contact
+  // points sit alongside any environment variables the user added by hand
+  if (answers.products.includes("orchestration")) {
+    helmValues = applyMultiregion(helmValues, answers)
+  }
+
+  // Step 5: remove any empty values
   return cleanObject(helmValues)
 }

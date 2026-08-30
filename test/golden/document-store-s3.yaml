@@ -1,0 +1,53 @@
+orchestration:
+  enabled: true
+  ingress:
+    grpc:
+      enabled: false
+optimize:
+  enabled: false
+identity:
+  enabled: false
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: false
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: false
+global:
+  elasticsearch:
+    enabled: true
+    external: true
+    auth:
+      username: camunda
+      secret:
+        inlineSecret: es-secret
+    url:
+      protocol: https
+      host: elasticsearch.example.internal
+      port: 9200
+    tls:
+      enabled: true
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+  documentStore:
+    type:
+      inmemory:
+        enabled: false
+      aws:
+        enabled: true
+        bucket: camunda-documents
+        region: eu-central-1
+        bucketPath: production/
+        irsa:
+          enabled: true
+      gcp:
+        enabled: false
+    activeStoreId: AWS
+elasticsearch:
+  enabled: false

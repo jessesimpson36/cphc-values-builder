@@ -21,7 +21,39 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Validate displayConfig paths against schema.json
+      # schema.json is committed, so a stale one would silently pass every other
+      # check. Regenerate it and fail if it differs from what was committed.
+      - name: Schema is in sync with public/values.yaml
+        run: |
+          npm run parse
+          git diff --exit-code --stat src/schema.json src/chartMeta.json \
+            || { echo "::error::schema.json is stale - run 'npm run parse' and commit the result"; exit 1; }
+
+      - name: Validate Helm paths against the chart schema
         run: npm run validate
 
+      - name: Unit tests and golden files
+        run: npm test
+
       - run: npm run build
+
+  # Renders every scenario against the published chart. This is what catches a
+  # value the chart rejects outright - a renamed path, a number where the chart
+  # schema wants a string, or a missing key another component requires. Unit
+  # tests alone cannot see any of that.
+  helm-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: azure/setup-helm@v4
+
+      - run: npm ci
+
+      - name: Render generated values against the Camunda chart
+        run: npm run verify:helm

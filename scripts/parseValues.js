@@ -7,8 +7,8 @@
  *
  * Run with:  npm run parse
  *
- * Input:   public/values.yaml
- * Output:  src/schema.json
+ * Input:   public/values.yaml, package.json (camundaChart)
+ * Output:  src/schema.json, src/chartMeta.json
  *
  * Data flow:
  *
@@ -166,3 +166,32 @@ fs.writeFileSync(
 )
 
 process.stdout.write(`[parse] Done - schema.json written to src/schema.json (${fs.statSync(outputPath).size.toLocaleString()} bytes)\n`)
+
+
+// ─── Write Chart Metadata ─────────────────────────────────────────────────────
+//
+// public/values.yaml is a vendored copy of one specific published chart release.
+// Nothing inside the file records which one, so the version is declared in
+// package.json under "camundaChart" and mirrored here for the UI to display.
+// Users cannot judge whether generated output applies to their cluster without
+// knowing the chart version it was built from.
+//
+// When bumping the chart, update package.json first — see docs/architecture.md.
+
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
+)
+
+if (!pkg.camundaChart?.version) {
+  console.error('[parse] package.json is missing "camundaChart.version" - cannot record chart provenance.')
+  process.exit(1)
+}
+
+const chartMetaPath = path.join(__dirname, '../src/chartMeta.json')
+
+fs.writeFileSync(
+  chartMetaPath,
+  JSON.stringify(pkg.camundaChart, null, 2) + '\n'
+)
+
+process.stdout.write(`[parse] Done - chartMeta.json written (chart ${pkg.camundaChart.chart} ${pkg.camundaChart.version}, Camunda ${pkg.camundaChart.appVersion})\n`)
