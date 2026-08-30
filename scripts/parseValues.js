@@ -26,7 +26,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import yaml from 'js-yaml'
+import { loadValues } from '../src/yaml.js'
 
 // Resolve __dirname in ESM (not available natively unlike CommonJS)
 const __filename = fileURLToPath(import.meta.url)
@@ -42,7 +42,7 @@ const rawYaml = fs.readFileSync(
 process.stdout.write(`[parse] Read values.yaml - ${rawYaml.length.toLocaleString()} characters\n`)
 
 // Parse the YAML into a JavaScript object so we can traverse its structure
-const parsedYaml = yaml.load(rawYaml)
+const parsedYaml = loadValues(rawYaml)
 
 process.stdout.write(`[parse] YAML parsed - top-level keys: ${Object.keys(parsedYaml).join(', ')}\n`)
 
