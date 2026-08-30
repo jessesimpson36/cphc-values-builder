@@ -55,6 +55,28 @@ jobs:
 
       - run: npm ci
 
-      # Renders every scenario against every supported Camunda release.
+      # Builds the container image but deliberately never pushes it. No image is
+  # published anywhere (issue #28) - this only proves the Dockerfile still
+  # builds, so a dependency or build-script change cannot quietly break
+  # self-hosting for the people who build it themselves.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the image
+        run: docker build -t cphc-values-builder:ci .
+
+      - name: It serves the app
+        run: |
+          docker run -d --name cphc -p 8080:8080 cphc-values-builder:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://localhost:8080/ | grep -q 'Camunda Helm Values Generator'
+          docker rm -f cphc
+
+  # Renders every scenario against every supported Camunda release.
       - name: Render generated values against every supported chart
         run: npm run verify:helm
