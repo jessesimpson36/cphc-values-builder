@@ -6,23 +6,7 @@ orchestration:
 optimize:
   enabled: false
 identity:
-  enabled: true
-  externalDatabase:
-    enabled: true
-    host: identity-db.example.internal
-    port: 5432
-    username: identity
-    secret:
-      existingSecret: camunda-identity-db
-      existingSecretKey: password
-    database: identity
-  firstUser:
-    enabled: true
-    username: admin
-    email: admin@example.com
-    secret:
-      existingSecret: camunda-first-user
-      existingSecretKey: password
+  enabled: false
 identityPostgresql:
   enabled: false
 webModeler:
@@ -40,8 +24,7 @@ global:
     auth:
       username: camunda
       secret:
-        existingSecret: camunda-elasticsearch
-        existingSecretKey: password
+        inlineSecret: es-secret
     url:
       protocol: https
       host: elasticsearch.example.internal
@@ -52,9 +35,10 @@ global:
     enabled: false
   ingress:
     enabled: false
-  license:
-    secret:
-      existingSecret: camunda-license
-      existingSecretKey: license-key
+  tls:
+    caBundle:
+      secret:
+        existingSecret: camunda-ca-bundle
+        existingSecretKey: ca.crt
 elasticsearch:
   enabled: false

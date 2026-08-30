@@ -32,6 +32,7 @@ The tool surfaces only the fields users actually need to configure, handles all 
 - **Cluster sizing from a throughput target** — enter "1000 process instances per second" and get broker count, partition count, replication factor and resources, calibrated against Camunda's benchmark data
 - **Multi-region** — generates the full cross-region broker contact point list, which the chart cannot compute itself
 - **Existing Kubernetes secrets** — reference pre-created secrets instead of writing credentials in plaintext
+- **Private CA trust** — mount a CA bundle so pods trust an external database behind a corporate certificate authority
 - **OIDC authentication** — configure an external identity provider
 - **Document stores** — S3 (with IRSA) or GCS instead of the default in-memory store, which loses documents on restart
 - **OpenShift and AWS EKS** — security context adaptation and IRSA set across every sub-chart
