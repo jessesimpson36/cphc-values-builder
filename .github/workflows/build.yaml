@@ -51,7 +51,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       - run: npm ci
 
