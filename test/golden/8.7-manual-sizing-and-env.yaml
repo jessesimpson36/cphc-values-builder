@@ -1,0 +1,69 @@
+zeebe:
+  enabled: true
+  clusterSize: '6'
+  partitionCount: '6'
+  replicationFactor: '3'
+  pvcSize: 64Gi
+  resources:
+    requests:
+      cpu: 2000m
+  env:
+    - name: ZEEBE_LOG_LEVEL
+      value: DEBUG
+operate:
+  enabled: true
+  env:
+    - name: OPERATE_LOG_LEVEL
+      value: DEBUG
+tasklist:
+  enabled: true
+  env:
+    - name: TASKLIST_LOG_LEVEL
+      value: DEBUG
+optimize:
+  enabled: false
+identity:
+  enabled: false
+identityPostgresql:
+  enabled: false
+identityKeycloak:
+  enabled: false
+global:
+  identity:
+    auth:
+      enabled: false
+  elasticsearch:
+    enabled: true
+    external: true
+    auth:
+      username: camunda
+      password: es-secret
+    url:
+      protocol: https
+      host: elasticsearch.example.internal
+      port: 9200
+    tls:
+      enabled: true
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+webModeler:
+  enabled: false
+postgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: false
+elasticsearch:
+  enabled: false
+zeebeGateway:
+  ingress:
+    grpc:
+      enabled: true
+      className: nginx
+      host: zeebe.example.com
+      tls:
+        enabled: true
+        secretName: zeebe-tls

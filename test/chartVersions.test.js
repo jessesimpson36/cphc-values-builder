@@ -19,6 +19,7 @@ import {
 } from '../src/chartVersions.js'
 import { displayConfig } from '../src/displayConfig.js'
 import { transformAnswers } from '../src/transform.js'
+import { flattenLeafPaths } from '../src/objectPaths.js'
 import { scenarios } from '../test/scenarios.js'
 
 describe('supported versions', () => {
@@ -105,15 +106,17 @@ describe('generating for each release', () => {
   })
 
   it('never writes a path the target release does not have', () => {
+    // Checked against the full dotted path, not a bare leaf name — several
+    // unrelated fields legitimately share a leaf like "env" or "enabled", so
+    // a substring check on the raw JSON would flag those as false positives.
     for (const chart of SUPPORTED_VERSIONS) {
-      const absent = unsupportedFields({ chartVersion: chart.key })
-      if (absent.length === 0) continue
+      const absentPaths = new Set(unsupportedFields({ chartVersion: chart.key }))
+      if (absentPaths.size === 0) continue
 
       for (const scenario of scenarios) {
-        const text = JSON.stringify(transformAnswers({ ...scenario.answers, chartVersion: chart.key }))
-        for (const missing of absent) {
-          const leaf = missing.split('.').pop()
-          expect(text, `${scenario.name} on ${chart.key} leaked ${missing}`).not.toContain(`"${leaf}"`)
+        const emitted = flattenLeafPaths(transformAnswers({ ...scenario.answers, chartVersion: chart.key }))
+        for (const path of emitted) {
+          expect(absentPaths.has(path), `${scenario.name} on ${chart.key} wrote ${path}`).toBe(false)
         }
       }
     }

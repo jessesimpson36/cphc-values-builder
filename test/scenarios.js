@@ -345,4 +345,61 @@ export const scenarios = [
       orchestration_env: [{ name: 'CAMUNDA_LOG_LEVEL', value: 'INFO' }],
     },
   },
+
+  // ── Camunda 8.7 ────────────────────────────────────────────────────────────
+  // 8.7 predates the 8.8 merge of Zeebe/Zeebe Gateway/Operate/Tasklist into one
+  // "Orchestration Cluster" component, and predates the <base>.secret.* secret
+  // convention entirely. Every other scenario above is replayed against 8.7 too
+  // (via npm run verify:helm), but these two get dedicated golden files because
+  // the OUTPUT SHAPE genuinely differs on 8.7, not just which paths are used.
+  {
+    name: '8.7-manual-sizing-and-env',
+    description: 'Orchestration Cluster on 8.7 — sizing and gRPC ingress map to zeebe/zeebeGateway, and env vars split into three separate arrays.',
+    answers: {
+      chartVersion: '8.7',
+      products: ['orchestration'],
+      databaseType: 'elasticsearch',
+      ...es,
+      sizing_mode: 'Manual',
+      cluster_size: '6',
+      partition_count: '6',
+      replication_factor: '3',
+      pvc_size: '64Gi',
+      cpu_request: '2000m',
+      grpc_enabled: true,
+      grpc_class: 'nginx',
+      grpc_host: 'zeebe.example.com',
+      grpc_tls_enabled: true,
+      grpc_tls_secret: 'zeebe-tls',
+      zeebe_env: [{ name: 'ZEEBE_LOG_LEVEL', value: 'DEBUG' }],
+      operate_env: [{ name: 'OPERATE_LOG_LEVEL', value: 'DEBUG' }],
+      tasklist_env: [{ name: 'TASKLIST_LOG_LEVEL', value: 'DEBUG' }],
+    },
+  },
+  {
+    name: '8.7-existing-secrets',
+    description: 'Credential references on 8.7 — flat paths, and identity DB uses existingSecretPasswordKey rather than existingSecretKey.',
+    answers: {
+      chartVersion: '8.7',
+      products: ['orchestration', 'identity'],
+      databaseType: 'elasticsearch',
+      // ES has no "existing secret" option on 8.7's chart at all — only the
+      // inline field is offered, and it writes global.elasticsearch.auth.password.
+      es_username: 'camunda',
+      es_password: 'es-secret',
+      es_protocol: 'https',
+      es_host: 'elasticsearch.example.internal',
+      es_port: '9200',
+      identity_db_host: 'identity-db.example.internal',
+      identity_db_port: '5432',
+      identity_db_username: 'identity',
+      identity_db_name: 'identity',
+      identity_db_password_secret_mode: 'Existing secret',
+      identity_db_password_existing_secret: 'camunda-identity-db',
+      identity_db_password_existing_secret_key: 'password',
+      license_secret_mode: 'Existing secret',
+      license_existing_secret: 'camunda-license',
+      license_existing_secret_key: 'license-key',
+    },
+  },
 ]

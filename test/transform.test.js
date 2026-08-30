@@ -294,7 +294,181 @@ describe('field mapping', () => {
   })
 })
 
-// ─── 8. Output is always valid YAML ───────────────────────────────────────────
+// ─── 8. Camunda 8.7 — pre-merge Orchestration Cluster ─────────────────────────
+//
+// 8.8 merged Zeebe, Zeebe Gateway, Operate and Tasklist into one Orchestration
+// Cluster component. 8.7's chart predates that merge, and several of its
+// defaults differ from 8.8+ in ways that are easy to get backwards — each
+// assertion below is a fact verified against the real vendored 8.7 chart via
+// `npm run verify:helm`, not an assumption.
+
+describe('8.7 orchestration components', () => {
+  const base = (overrides = {}) => ({
+    products: ['orchestration'],
+    databaseType: 'elasticsearch',
+    chartVersion: '8.7',
+    es_username: 'camunda',
+    es_password: 'secret',
+    es_protocol: 'https',
+    es_host: 'es.example.com',
+    es_port: '9200',
+    ...overrides,
+  })
+
+  it('fans "Orchestration Cluster" out to zeebe, operate and tasklist — not zeebeGateway', () => {
+    // zeebeGateway has no enabled flag of its own in 8.7's chart; it is
+    // always deployed alongside zeebe. (zeebeGateway.ingress.grpc.enabled does
+    // still appear — that is the separate default-disabled-ingress write.)
+    const out = transformAnswers(base())
+    expect(out.zeebe.enabled).toBe(true)
+    expect(out.operate.enabled).toBe(true)
+    expect(out.tasklist.enabled).toBe(true)
+    expect(out.zeebeGateway.enabled).toBeUndefined()
+  })
+
+  it('maps cluster sizing to zeebe.*, not orchestration.*', () => {
+    const out = transformAnswers(base({
+      sizing_mode: 'Manual',
+      cluster_size: '6',
+      partition_count: '6',
+      replication_factor: '3',
+    }))
+    expect(out.zeebe.clusterSize).toBe('6')
+    expect(out.zeebe.partitionCount).toBe('6')
+    expect(out.orchestration).toBeUndefined()
+  })
+
+  it('maps gRPC ingress to zeebeGateway.ingress.grpc, not orchestration.ingress.grpc', () => {
+    const out = transformAnswers(base({ grpc_enabled: true, grpc_host: 'zeebe.example.com' }))
+    expect(out.zeebeGateway.ingress.grpc.enabled).toBe(true)
+    expect(out.zeebeGateway.ingress.grpc.host).toBe('zeebe.example.com')
+  })
+
+  it('splits environment variables into zeebe.env, operate.env and tasklist.env', () => {
+    const out = transformAnswers(base({
+      zeebe_env: [{ name: 'A', value: '1' }],
+      operate_env: [{ name: 'B', value: '2' }],
+      tasklist_env: [{ name: 'C', value: '3' }],
+    }))
+    expect(out.zeebe.env).toEqual([{ name: 'A', value: '1' }])
+    expect(out.operate.env).toEqual([{ name: 'B', value: '2' }])
+    expect(out.tasklist.env).toEqual([{ name: 'C', value: '3' }])
+  })
+
+  it('injects multi-region contact points into zeebe.env specifically', () => {
+    const out = transformAnswers(base({
+      sizing_mode: 'Manual',
+      cluster_size: '4',
+      partition_count: '4',
+      replication_factor: '4',
+      multiregion_enabled: true,
+      multiregion_region_id: '0',
+      multiregion_namespaces: ['region-a', 'region-b'],
+    }))
+    const points = out.zeebe.env.find((e) => e.name === 'CAMUNDA_CLUSTER_INITIALCONTACTPOINTS')
+    expect(points).toBeDefined()
+    expect(points.value).toContain('region-a')
+  })
+
+  it('writes Web Modeler\'s bundled database to postgresql.enabled, not webModelerPostgresql', () => {
+    const out = transformAnswers({ ...base(), products: ['orchestration', 'webModeler'] })
+    expect(out.postgresql.enabled).toBe(false)
+    expect(out.webModelerPostgresql).toBeUndefined()
+  })
+})
+
+describe('8.7 auth defaults', () => {
+  // 8.7's chart defaults identityKeycloak.enabled AND global.identity.auth.enabled
+  // to true (8.8+ defaults both to false). Left alone, every non-Identity
+  // deployment fails at template time trying to resolve an OIDC issuer from a
+  // Keycloak that was never deployed - confirmed by rendering it.
+  it('forces Keycloak and identity auth off when Identity is not selected', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], databaseType: 'elasticsearch', chartVersion: '8.7',
+    })
+    expect(out.identityKeycloak.enabled).toBe(false)
+    expect(out.global.identity.auth.enabled).toBe(false)
+  })
+
+  it('leaves them at chart defaults when Identity is selected', () => {
+    const out = transformAnswers({
+      products: ['orchestration', 'identity'], databaseType: 'elasticsearch', chartVersion: '8.7',
+      identity_db_host: 'db.example.com', identity_db_port: '5432',
+      identity_db_username: 'identity', identity_db_password: 'secret', identity_db_name: 'identity',
+    })
+    expect(out.identityKeycloak).toBeUndefined()
+    expect(out.global.identity).toBeUndefined()
+  })
+
+  it('does not force these off on 8.8/8.9, which already default both to false', () => {
+    const out = transformAnswers({ products: ['orchestration'], databaseType: 'elasticsearch' })
+    expect(out.identityKeycloak).toBeUndefined()
+    expect(out.global.identity).toBeUndefined()
+  })
+})
+
+describe('8.7 credential shapes', () => {
+  it('writes ES/OS passwords flat, with no existing-secret option offered', () => {
+    // 8.7's chart has no auth.secret.* structure for Elasticsearch/OpenSearch
+    // at all - only a plaintext auth.password.
+    const out = transformAnswers({
+      products: ['orchestration'], databaseType: 'elasticsearch', chartVersion: '8.7',
+      es_host: 'es.example.com', es_password: 'secret',
+      es_password_secret_mode: 'Existing secret', // ignored - not offered on 8.7
+      es_password_existing_secret: 'should-not-be-used',
+    })
+    expect(out.global.elasticsearch.auth.password).toBe('secret')
+    expect(out.global.elasticsearch.auth.secret).toBeUndefined()
+    expect(out.global.elasticsearch.auth.existingSecret).toBeUndefined()
+  })
+
+  it('uses existingSecretPasswordKey for Identity\'s external database, not existingSecretKey', () => {
+    const out = transformAnswers({
+      products: ['identity'], chartVersion: '8.7',
+      identity_db_host: 'db.example.com', identity_db_port: '5432', identity_db_username: 'identity',
+      identity_db_name: 'identity',
+      identity_db_password_secret_mode: 'Existing secret',
+      identity_db_password_existing_secret: 'db-creds',
+      identity_db_password_existing_secret_key: 'password',
+    })
+    expect(out.identity.externalDatabase.existingSecret).toBe('db-creds')
+    expect(out.identity.externalDatabase.existingSecretPasswordKey).toBe('password')
+    expect(out.identity.externalDatabase.existingSecretKey).toBeUndefined()
+  })
+
+  it('excludes AWS S3 document-store credential fields entirely — the 8.7 shape does not correspond', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], databaseType: 'elasticsearch', chartVersion: '8.7',
+      es_host: 'es.example.com', es_password: 'secret',
+      document_store_type: 'AWS S3', doc_aws_bucket: 'bucket', doc_aws_region: 'eu-central-1',
+      doc_aws_access_key: 'AKIA...', doc_aws_secret_key: 'shh',
+    })
+    expect(out.global.documentStore.type.aws.bucket).toBe('bucket')
+    expect(out.global.documentStore.type.aws.accessKeyId).toBeUndefined()
+    expect(out.global.documentStore.type.aws.secretAccessKey).toBeUndefined()
+  })
+
+  it('hides the OIDC section entirely — 8.7 has no per-component auth method concept', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], databaseType: 'elasticsearch', chartVersion: '8.7',
+      es_host: 'es.example.com', es_password: 'secret',
+      auth_method: 'oidc', oidc_type: 'KEYCLOAK', oidc_issuer: 'https://example.com',
+    })
+    expect(out.global.security).toBeUndefined()
+    expect(out.orchestration).toBeUndefined()
+  })
+
+  it('hides the TLS CA bundle section — global.tls.caBundle does not exist on 8.7', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], databaseType: 'elasticsearch', chartVersion: '8.7',
+      es_host: 'es.example.com', es_password: 'secret', es_tls: true,
+      ca_bundle_secret: 'my-bundle',
+    })
+    expect(out.global.tls).toBeUndefined()
+  })
+})
+
+// ─── 9. Output is always valid YAML ───────────────────────────────────────────
 
 describe('serialisation', () => {
   it('round-trips every scenario through js-yaml', () => {
