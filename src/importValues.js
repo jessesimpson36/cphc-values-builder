@@ -13,6 +13,8 @@
 
 import { displayConfig } from './displayConfig.js'
 import { flattenLeafPaths } from './objectPaths.js'
+import { resolveFieldPath } from './fieldPaths.js'
+import { DEFAULT_VERSION } from './chartVersions.js'
 
 // ─── Read a dot-notation path out of a nested object ─────────────────────────
 
@@ -25,9 +27,19 @@ export function getNestedValue(obj, path) {
 
 // ─── Product detection ───────────────────────────────────────────────────────
 
-function detectProducts(values) {
+// On 8.7, "Orchestration Cluster" fans out across zeebe/operate/tasklist
+// rather than one orchestration.enabled flag - see transform.js. Any one of
+// them being enabled is enough to detect the product as selected.
+function detectProducts(values, targetVersion) {
   return displayConfig.products
-    .filter((product) => getNestedValue(values, `${product.id}.enabled`) === true)
+    .filter((product) => {
+      if (product.id === 'orchestration' && targetVersion === '8.7') {
+        return ['zeebe', 'operate', 'tasklist'].some(
+          (component) => getNestedValue(values, `${component}.enabled`) === true,
+        )
+      }
+      return getNestedValue(values, `${product.id}.enabled`) === true
+    })
     .map((product) => product.id)
 }
 
@@ -50,13 +62,25 @@ function detectDocumentStore(values) {
  * @param {object} values  a parsed values.yaml
  * @returns {{answers: object, unmapped: string[], warnings: string[]}}
  */
-export function importValues(values) {
+/**
+ * @param values        a parsed values.yaml
+ * @param targetVersion  which supported release to interpret it against — a
+ *                       values.yaml carries no version marker of its own, so
+ *                       the caller supplies one (App.jsx uses whatever the
+ *                       form currently has selected).
+ */
+export function importValues(values, targetVersion = DEFAULT_VERSION) {
   if (!values || typeof values !== 'object') {
     return { answers: { products: [] }, unmapped: [], warnings: ['The file did not contain a YAML object.'] }
   }
 
+  // 8.7 predates the "Orchestration Cluster" merge and still calls the broker
+  // component "zeebe" - see transform.js's orchestrationBase for the same
+  // distinction on the way out.
+  const orchestrationBase = targetVersion === '8.7' ? 'zeebe' : 'orchestration'
+
   const warnings = []
-  const answers = { products: detectProducts(values) }
+  const answers = { products: detectProducts(values, targetVersion) }
 
   const databaseType = detectDatabaseType(values)
   if (databaseType) answers.databaseType = databaseType
@@ -80,7 +104,7 @@ export function importValues(values) {
     answers.multiregion_enabled = true
     answers.multiregion_region_id = String(getNestedValue(values, 'global.multiregion.regionId') ?? 0)
 
-    const contactPoints = (getNestedValue(values, 'orchestration.env') || [])
+    const contactPoints = (getNestedValue(values, `${orchestrationBase}.env`) || [])
       .find((entry) => entry?.name === 'CAMUNDA_CLUSTER_INITIALCONTACTPOINTS')
 
     if (contactPoints?.value) {
@@ -100,7 +124,7 @@ export function importValues(values) {
   // Sizing: a file with an explicit cluster size was sized by hand or by an
   // earlier throughput calculation. Either way the numbers are what matter, so
   // load them into manual mode where they are visible and editable.
-  if (getNestedValue(values, 'orchestration.clusterSize') !== undefined) {
+  if (getNestedValue(values, `${orchestrationBase}.clusterSize`) !== undefined) {
     answers.sizing_mode = 'Manual'
   }
 
@@ -113,10 +137,11 @@ export function importValues(values) {
 
   for (const section of displayConfig.sections) {
     for (const field of section.fields) {
-      if (!field.path) continue
-      mappedPaths.add(field.path)
+      const resolvedPath = resolveFieldPath(field, targetVersion)
+      if (!resolvedPath) continue
+      mappedPaths.add(resolvedPath)
 
-      const value = getNestedValue(values, field.path)
+      const value = getNestedValue(values, resolvedPath)
       if (value === undefined || value === null || value === '') continue
 
       if (field.type === 'env_vars') {

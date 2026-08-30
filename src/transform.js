@@ -15,7 +15,8 @@
  */
 
 import { displayConfig } from "./displayConfig.js"
-import { fieldApplies } from "./chartVersions.js"
+import { fieldApplies, selectedVersion } from "./chartVersions.js"
+import { resolveFieldPath } from "./fieldPaths.js"
 import { calculateSizing } from "./sizing.js"
 
 // ─── Utility: set a value in a nested object using a dot-notation path ────────
@@ -53,12 +54,50 @@ function toNumber(value) {
   return isNaN(n) ? value : n
 }
 
+// Camunda 8.8 merged Zeebe, Zeebe Gateway, Operate and Tasklist into one
+// "Orchestration Cluster" component. 8.7's chart predates that merge and still
+// runs them as separately-enabled components sharing the same broker cluster.
+// zeebeGateway has no enabled flag of its own in 8.7 - it is always deployed
+// alongside zeebe - so it is not in this list.
+const ORCHESTRATION_8_7_COMPONENTS = ["zeebe", "operate", "tasklist"]
+
+function isPre88(answers) {
+  return selectedVersion(answers) === "8.7"
+}
+
+// The concept "Orchestration Cluster's cluster settings" lives at
+// orchestration.* from 8.8 onward and zeebe.* on 8.7 — used by sizing and
+// multi-region below, which write these paths directly rather than through a
+// displayConfig field.
+function orchestrationBase(answers) {
+  return isPre88(answers) ? "zeebe" : "orchestration"
+}
+
+// Same idea for the gRPC ingress, which the 8.7 chart exposes on the gateway
+// component specifically rather than on the merged orchestration component.
+function grpcIngressBase(answers) {
+  return isPre88(answers) ? "zeebeGateway.ingress.grpc" : "orchestration.ingress.grpc"
+}
+
+// Web Modeler's bundled database is its own "webModelerPostgresql" sub-chart
+// from 8.8 onward. 8.7 predates that split and shares one top-level
+// "postgresql" sub-chart for it instead.
+function webModelerDbBase(answers) {
+  return isPre88(answers) ? "postgresql" : "webModelerPostgresql"
+}
+
 // ─── Product-specific automatic flags ─────────────────────────────────────────
 function applyProductFlags(helmValues, answers) {
   const selected = answers.products
 
   // ── Orchestration Cluster ──────────────────────────────────────────────────
-  helmValues = setNestedValue(helmValues, "orchestration.enabled", selected.includes("orchestration"))
+  if (isPre88(answers)) {
+    for (const component of ORCHESTRATION_8_7_COMPONENTS) {
+      helmValues = setNestedValue(helmValues, `${component}.enabled`, selected.includes("orchestration"))
+    }
+  } else {
+    helmValues = setNestedValue(helmValues, "orchestration.enabled", selected.includes("orchestration"))
+  }
 
   // ── Optimize ──────────────────────────────────────────────────────────────
   helmValues = setNestedValue(helmValues, "optimize.enabled", selected.includes("optimize"))
@@ -72,15 +111,22 @@ function applyProductFlags(helmValues, answers) {
   } else {
     helmValues = setNestedValue(helmValues, "identityPostgresql.enabled", false)
   }
+  // 8.7's chart defaults BOTH identityKeycloak.enabled and
+  // global.identity.auth.enabled to true (8.8+ defaults both to false). Left
+  // alone with Identity unselected, the chart still tries to resolve an OIDC
+  // issuer URL from a Keycloak that was never deployed and every non-Identity
+  // deployment fails at template time with an unrelated-looking error deep in
+  // a naming helper. Both must be forced off explicitly.
+  if (isPre88(answers) && !selected.includes("identity")) {
+    helmValues = setNestedValue(helmValues, "identityKeycloak.enabled", false)
+    helmValues = setNestedValue(helmValues, "global.identity.auth.enabled", false)
+  }
 
   // ── Web Modeler ────────────────────────────────────────────────────────────
   helmValues = setNestedValue(helmValues, "webModeler.enabled", selected.includes("webModeler"))
-  if (selected.includes("webModeler")) {
-    // use external database, disable bundled postgresql
-    helmValues = setNestedValue(helmValues, "webModelerPostgresql.enabled", false)
-  } else {
-    helmValues = setNestedValue(helmValues, "webModelerPostgresql.enabled", false)
-  }
+  // Bundled database always disabled, selected or not - the form only ever
+  // wires up an external one.
+  helmValues = setNestedValue(helmValues, `${webModelerDbBase(answers)}.enabled`, false)
 
   // ── Connectors ────────────────────────────────────────────────────────────
   helmValues = setNestedValue(helmValues, "connectors.enabled", selected.includes("connectors"))
@@ -102,7 +148,7 @@ function applyProductFlags(helmValues, answers) {
     helmValues = setNestedValue(helmValues, 'global.compatibility.openshift.adaptSecurityContext', 'force')
     helmValues = setNestedValue(helmValues, 'identityPostgresql.global.compatibility.openshift.adaptSecurityContext', 'force')
     helmValues = setNestedValue(helmValues, 'identityKeycloak.global.compatibility.openshift.adaptSecurityContext', 'force')
-    helmValues = setNestedValue(helmValues, 'webModelerPostgresql.global.compatibility.openshift.adaptSecurityContext', 'force')
+    helmValues = setNestedValue(helmValues, `${webModelerDbBase(answers)}.global.compatibility.openshift.adaptSecurityContext`, 'force')
     helmValues = setNestedValue(helmValues, 'elasticsearch.global.compatibility.openshift.adaptSecurityContext', 'force')
   }
 
@@ -137,7 +183,7 @@ function applyProductFlags(helmValues, answers) {
     helmValues = setNestedValue(helmValues, "global.ingress.enabled", false)
   }
   if (selected.includes("orchestration") && !answers.grpc_enabled) {
-    helmValues = setNestedValue(helmValues, "orchestration.ingress.grpc.enabled", false)
+    helmValues = setNestedValue(helmValues, `${grpcIngressBase(answers)}.enabled`, false)
   }
 
   return helmValues
@@ -183,14 +229,15 @@ function applySizing(helmValues, answers) {
   // computed modes need to set them here.
   if (answers.sizing_mode !== "Throughput target") return helmValues
 
-  helmValues = setNestedValue(helmValues, "orchestration.clusterSize", String(sizing.clusterSize))
-  helmValues = setNestedValue(helmValues, "orchestration.partitionCount", String(sizing.partitionCount))
-  helmValues = setNestedValue(helmValues, "orchestration.replicationFactor", String(sizing.replicationFactor))
-  helmValues = setNestedValue(helmValues, "orchestration.pvcSize", sizing.pvcSize)
-  helmValues = setNestedValue(helmValues, "orchestration.resources.requests.cpu", sizing.resources.requests.cpu)
-  helmValues = setNestedValue(helmValues, "orchestration.resources.requests.memory", sizing.resources.requests.memory)
-  helmValues = setNestedValue(helmValues, "orchestration.resources.limits.cpu", sizing.resources.limits.cpu)
-  helmValues = setNestedValue(helmValues, "orchestration.resources.limits.memory", sizing.resources.limits.memory)
+  const base = orchestrationBase(answers)
+  helmValues = setNestedValue(helmValues, `${base}.clusterSize`, String(sizing.clusterSize))
+  helmValues = setNestedValue(helmValues, `${base}.partitionCount`, String(sizing.partitionCount))
+  helmValues = setNestedValue(helmValues, `${base}.replicationFactor`, String(sizing.replicationFactor))
+  helmValues = setNestedValue(helmValues, `${base}.pvcSize`, sizing.pvcSize)
+  helmValues = setNestedValue(helmValues, `${base}.resources.requests.cpu`, sizing.resources.requests.cpu)
+  helmValues = setNestedValue(helmValues, `${base}.resources.requests.memory`, sizing.resources.requests.memory)
+  helmValues = setNestedValue(helmValues, `${base}.resources.limits.cpu`, sizing.resources.limits.cpu)
+  helmValues = setNestedValue(helmValues, `${base}.resources.limits.memory`, sizing.resources.limits.memory)
 
   return helmValues
 }
@@ -279,18 +326,19 @@ function applyMultiregion(helmValues, answers) {
   helmValues = setNestedValue(helmValues, "global.multiregion.regionId", regionId)
 
   const clusterSize = effectiveClusterSize(answers)
+  const base = orchestrationBase(answers)
 
   // Written unconditionally: leaving it to the chart default would produce the
   // broken topology described above, and the contact point list below must
   // describe exactly the brokers that will exist.
-  helmValues = setNestedValue(helmValues, "orchestration.clusterSize", String(clusterSize))
+  helmValues = setNestedValue(helmValues, `${base}.clusterSize`, String(clusterSize))
 
   // Replication factor 4 is Camunda's requirement for dual-region so a quorum
   // survives losing a region — but never more than the number of brokers.
-  if (!helmValues.orchestration?.replicationFactor) {
+  if (!helmValues[base]?.replicationFactor) {
     helmValues = setNestedValue(
       helmValues,
-      "orchestration.replicationFactor",
+      `${base}.replicationFactor`,
       String(Math.min(4, clusterSize)),
     )
   }
@@ -299,8 +347,10 @@ function applyMultiregion(helmValues, answers) {
   if (contactPoints.length === 0) return helmValues
 
   // Prepend rather than replace: the user may have added their own env vars.
-  const existing = helmValues.orchestration?.env || []
-  helmValues = setNestedValue(helmValues, "orchestration.env", [
+  // On 8.7, `base` is "zeebe" specifically — the broker component that needs
+  // the topology, not Operate or Tasklist's separate env arrays.
+  const existing = helmValues[base]?.env || []
+  helmValues = setNestedValue(helmValues, `${base}.env`, [
     { name: CONTACT_POINTS_ENV, value: contactPoints.join(",") },
     ...existing.filter((entry) => entry.name !== CONTACT_POINTS_ENV),
   ])
@@ -348,11 +398,17 @@ function mapFieldsToHelm(helmValues, answers) {
 
   for (const section of visibleSections) {
     for (const field of section.fields) {
-      if (!field.path) continue
-
       // A field hidden inside a visible section is just as hidden as one in a
-      // collapsed section — its answer must not reach the output.
+      // collapsed section — its answer must not reach the output. This also
+      // covers a field whose `paths` override is null for the selected
+      // release (no chart equivalent there) or whose default path simply does
+      // not exist on that release.
       if (!fieldApplies(field, answers)) continue
+
+      // The path a field writes to can differ by release (src/fieldPaths.js)
+      // — resolved once here, used for every write below.
+      const path = resolveFieldPath(field, selectedVersion(answers))
+      if (!path) continue
 
       // env_vars type — convert to YAML array of { name, value } objects
       if (field.type === "env_vars") {
@@ -361,7 +417,7 @@ function mapFieldsToHelm(helmValues, answers) {
           .filter((row) => row.name && row.value)
           .map((row) => ({ name: row.name, value: row.value }))
         if (envArray.length > 0) {
-          helmValues = setNestedValue(helmValues, field.path, envArray)
+          helmValues = setNestedValue(helmValues, path, envArray)
         }
         continue
       }
@@ -370,7 +426,7 @@ function mapFieldsToHelm(helmValues, answers) {
       if (field.type === "string_list") {
         const items = (answers[field.id] || []).map((item) => (item || "").trim()).filter(Boolean)
         if (items.length > 0) {
-          helmValues = setNestedValue(helmValues, field.path, items)
+          helmValues = setNestedValue(helmValues, path, items)
         }
         continue
       }
@@ -383,7 +439,7 @@ function mapFieldsToHelm(helmValues, answers) {
         value = toNumber(value)
       }
 
-      helmValues = setNestedValue(helmValues, field.path, value)
+      helmValues = setNestedValue(helmValues, path, value)
     }
   }
 

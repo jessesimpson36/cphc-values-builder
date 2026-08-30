@@ -33,6 +33,7 @@ import {
   selectedVersion,
   fieldApplies,
   describePath,
+  sectionHasVisibleFields,
 } from "./chartVersions"
 import {
   transformAnswers,
@@ -694,7 +695,7 @@ export default function App() {
 
     try {
       const parsed = loadValues(await file.text())
-      const { answers: imported, unmapped, warnings } = importValues(parsed)
+      const { answers: imported, unmapped, warnings } = importValues(parsed, selectedVersion(answers))
 
       // A values.yaml carries no marker of the release it was written for, so
       // the current selection is kept rather than silently reset to the newest.
@@ -807,17 +808,23 @@ export default function App() {
         )}
 
         {/* Dynamic Sections */}
-        {visibleSections.map((section) => (
-          <div key={section.id}>
-            <Section
-              section={section}
-              answers={answers}
-              onFieldChange={handleFieldChange}
-            />
-            {section.id === "sizing" && <SizingPreview answers={answers} />}
-            {section.id === "multiRegionConfig" && <MultiregionPreview answers={answers} />}
-          </div>
-        ))}
+        {/* A section whose fields are all unavailable on the selected release
+            (e.g. Orchestration Cluster Environment Variables on 8.7, where the
+            equivalent is the three Zeebe/Operate/Tasklist sections instead)
+            would otherwise render as an empty card with just a title. */}
+        {visibleSections
+          .filter((section) => sectionHasVisibleFields(section, answers))
+          .map((section) => (
+            <div key={section.id}>
+              <Section
+                section={section}
+                answers={answers}
+                onFieldChange={handleFieldChange}
+              />
+              {section.id === "sizing" && <SizingPreview answers={answers} />}
+              {section.id === "multiRegionConfig" && <MultiregionPreview answers={answers} />}
+            </div>
+          ))}
 
         {/* Validation Errors */}
         {errors.length > 0 && (
