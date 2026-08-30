@@ -16,6 +16,21 @@
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
     },
+    // Majors are not automerged - they need a human to read the changelog - but
+    // they were arriving one PR per dependency, which is how the backlog this
+    // config was written to fix started rebuilding (ten open within a day of
+    // adding the test tooling). Group them into a single reviewable PR instead.
+    //
+    // Reviewing one is now realistic: `npm test` compares against committed
+    // golden files and `npm run verify:helm` renders every scenario against the
+    // published chart, so a dependency that changes generated output shows up
+    // as a diff rather than as a surprise in production.
+    {
+      "matchManagers": ["npm", "github-actions"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "major dependencies",
+      "automerge": false,
+    },
   ],
   // public/values.yaml is a verbatim copy of one published Camunda chart release,
   // not a file this project authors. Renovate bumping an image tag inside it

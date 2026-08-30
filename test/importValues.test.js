@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import yaml from 'js-yaml'
+import { dumpValues, loadValues } from '../src/yaml.js'
 import { transformAnswers } from '../src/transform.js'
 import { importValues, parseContactPoints, getNestedValue } from '../src/importValues.js'
 import { scenarios } from './scenarios.js'
@@ -39,10 +39,10 @@ describe('round-trip', () => {
 
   it('round-trips through YAML text, not just objects', () => {
     const scenario = scenarios.find((s) => s.name === 'production-full-stack')
-    const text = yaml.dump(transformAnswers(scenario.answers), { indent: 2, lineWidth: -1 })
-    const { answers } = importValues(yaml.load(text))
+    const text = dumpValues(transformAnswers(scenario.answers))
+    const { answers } = importValues(loadValues(text))
 
-    expect(flatten(transformAnswers(answers))).toEqual(flatten(yaml.load(text)))
+    expect(flatten(transformAnswers(answers))).toEqual(flatten(loadValues(text)))
   })
 })
 

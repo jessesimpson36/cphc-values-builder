@@ -36,7 +36,7 @@ import {
 } from "./transform"
 import { importValues } from "./importValues"
 import { CALIBRATION_PROFILES, DEFAULT_CALIBRATION } from "./sizing"
-import yaml from "js-yaml"
+import { dumpValues, loadValues } from "./yaml"
 import schema from "./schema.json"
 import chartMeta from "./chartMeta.json"
 
@@ -513,7 +513,7 @@ export default function App() {
     if (errs.length > 0) { setErrors(errs); return }
     setErrors([])
     const helmValues = transformAnswers(answers)
-    setYamlOutput(yaml.dump(helmValues, { indent: 2, lineWidth: -1 }))
+    setYamlOutput(dumpValues(helmValues))
   }
 
   const handleCopy = () => {
@@ -549,7 +549,7 @@ export default function App() {
     event.target.value = ""
 
     try {
-      const parsed = yaml.load(await file.text())
+      const parsed = loadValues(await file.text())
       const { answers: imported, unmapped, warnings } = importValues(parsed)
 
       setAnswers(imported)
