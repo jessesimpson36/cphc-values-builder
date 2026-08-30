@@ -100,6 +100,24 @@ is committed, so no build step is needed first.
 `npm run verify:helm` is the one that matters most: it proves the chart actually
 **accepts** the generated file. Unit tests only prove the output is what we intended.
 
+### Self-hosting
+
+The app is a static bundle with no backend, so the hosted version at
+[cphc-values-wizard.vercel.app](https://cphc-values-wizard.vercel.app/) and a copy you
+run yourself are the same thing. To run your own:
+
+```bash
+docker build -t cphc-values-builder .
+docker run --rm -p 8080:8080 cphc-values-builder
+```
+
+**No image is published to any registry** — you build it yourself. The image serves on
+port 8080 as a non-root user, so it runs unmodified under OpenShift's `restricted-v2`
+SCC and any cluster that rejects root containers.
+
+`npm run build` alone also produces a plain `dist/` directory you can serve with any web
+server, if you would rather not use a container at all.
+
 ---
 
 ## Usage

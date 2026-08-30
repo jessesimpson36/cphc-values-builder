@@ -1,0 +1,9 @@
+# Build context hygiene: keep the image small, and keep local state out of it.
+.git
+node_modules
+dist
+tmp
+docs
+test
+.github
+*.md

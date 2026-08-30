@@ -205,6 +205,15 @@ nothing reads is worse than no field: it reads as though something was configure
 - `displayConfig.constraints` mirrors the chart's `templates/common/constraints.tpl`.
   Keep it in sync on chart upgrades.
 
+## Container image
+
+`Dockerfile` builds the static bundle and serves it via nginx-unprivileged on port
+8080 as non-root, so it runs under OpenShift's restricted-v2 SCC. **Nothing is
+published to any registry** — issue #28 asked for a published image and the answer
+was a buildable Dockerfile instead, so the project takes on no release pipeline or
+hosting obligation. CI builds it and checks it serves, but never pushes. Don't add
+a push step without that being an explicit decision.
+
 ## Styling
 
 Plain CSS, no framework. `src/styles/theme.css` defines three themes as CSS variables
