@@ -382,6 +382,70 @@ describe('cross-component constraints', () => {
   })
 })
 
+describe('Identity OIDC', () => {
+  it('offers an external Identity URL only when Identity is not selected', () => {
+    render(<App />)
+    selectProduct('Console')
+    expect(screen.getByText('External Management Identity')).toBeDefined()
+
+    selectProduct('Management Identity')
+    expect(screen.queryByText('External Management Identity')).toBeNull()
+  })
+
+  it('unblocks Console once an external Identity URL is given', () => {
+    render(<App />)
+    selectProduct('Console')
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText(/Console requires Management Identity/)).toBeDefined()
+
+    fireEvent.change(screen.getByPlaceholderText('https://identity.example.com'), {
+      target: { value: 'https://identity.example.com' },
+    })
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.queryByText(/Console requires Management Identity/)).toBeNull()
+  })
+
+  it('reveals the OIDC provider and client sections once auth is enabled', () => {
+    render(<App />)
+    selectProduct('Management Identity')
+    expect(screen.queryByText('Identity OIDC Provider')).toBeNull()
+
+    fireEvent.click(screen.getByText('Enable authentication on Management Identity'))
+    expect(screen.getByText('Identity OIDC Provider')).toBeDefined()
+    expect(screen.getByText('Identity OIDC Clients')).toBeDefined()
+  })
+
+  it('hides the Identity client secret when the provider is Keycloak', () => {
+    render(<App />)
+    selectProduct('Management Identity')
+    fireEvent.click(screen.getByText('Enable authentication on Management Identity'))
+
+    // Provider type lives in the Provider card; the secret it governs is in
+    // the Clients card.
+    const provider = screen.getByText('Identity OIDC Provider').closest('.card')
+    const clients = () => screen.getByText('Identity OIDC Clients').closest('.card')
+
+    fireEvent.click(within(provider).getByRole('button', { name: 'MICROSOFT' }))
+    expect(within(clients()).getByPlaceholderText('Identity client secret')).toBeDefined()
+
+    // Keycloak issues this credential itself; the chart rejects it being set.
+    fireEvent.click(within(provider).getByRole('button', { name: 'KEYCLOAK' }))
+    expect(within(clients()).queryByPlaceholderText('Identity client secret')).toBeNull()
+  })
+
+  it('shows a product\'s client fields only when that product is selected', () => {
+    render(<App />)
+    selectProduct('Management Identity')
+    fireEvent.click(screen.getByText('Enable authentication on Management Identity'))
+
+    const card = () => screen.getByText('Identity OIDC Clients').closest('.card')
+    expect(within(card()).queryByText('Optimize client ID')).toBeNull()
+
+    selectProduct('Optimize')
+    expect(within(card()).getByText('Optimize client ID')).toBeDefined()
+  })
+})
+
 describe('generated output', () => {
   it('produces YAML containing the values that were entered', () => {
     render(<App />)

@@ -1,0 +1,71 @@
+orchestration:
+  enabled: true
+  ingress:
+    grpc:
+      enabled: false
+optimize:
+  enabled: true
+identity:
+  enabled: true
+  externalDatabase:
+    enabled: true
+    host: identity-db.example.internal
+    port: 5432
+    username: identity
+    secret:
+      inlineSecret: identity-secret
+    database: identity
+identityPostgresql:
+  enabled: false
+webModeler:
+  enabled: false
+webModelerPostgresql:
+  enabled: false
+connectors:
+  enabled: false
+console:
+  enabled: true
+global:
+  elasticsearch:
+    enabled: true
+    external: true
+    auth:
+      username: camunda
+      secret:
+        inlineSecret: es-secret
+    url:
+      protocol: https
+      host: elasticsearch.example.internal
+      port: 9200
+    tls:
+      enabled: true
+  opensearch:
+    enabled: false
+  ingress:
+    enabled: false
+  gateway:
+    enabled: false
+  identity:
+    auth:
+      enabled: true
+      type: MICROSOFT
+      issuer: https://login.microsoftonline.com/TENANT/v2.0
+      issuerBackendUrl: https://login.microsoftonline.com/TENANT/v2.0
+      tokenUrl: https://login.microsoftonline.com/TENANT/oauth2/v2.0/token
+      jwksUrl: https://login.microsoftonline.com/TENANT/discovery/v2.0/keys
+      identity:
+        clientId: camunda-identity
+        secret:
+          inlineSecret: identity-client-secret
+        initialClaimName: oid
+        initialClaimValue: 00000000-0000-0000-0000-000000000000
+      console:
+        clientId: camunda-console
+        redirectUrl: https://console.example.com
+      optimize:
+        clientId: camunda-optimize
+        redirectUrl: https://optimize.example.com
+        secret:
+          inlineSecret: optimize-client-secret
+elasticsearch:
+  enabled: false

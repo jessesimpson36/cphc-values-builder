@@ -586,6 +586,141 @@ describe('Gateway API constraints', () => {
   })
 })
 
+// ─── 9c. Identity authentication (OIDC) ───────────────────────────────────────
+//
+// Authentication for Management Identity and the apps behind it (Console, Web
+// Modeler, Optimize) — distinct from the Orchestration Cluster's own OIDC
+// section, which configures Zeebe/Operate/Tasklist. A deployment running both
+// needs both, and the chart reads them independently.
+
+describe('Identity OIDC', () => {
+  const base = (overrides = {}) => ({
+    products: ['identity'], chartVersion: '8.9',
+    identity_db_host: 'db', identity_db_port: '5432', identity_db_username: 'i',
+    identity_db_password: 'pw', identity_db_name: 'identity',
+    identity_auth_enabled: true,
+    identity_auth_type: 'MICROSOFT',
+    identity_auth_issuer: 'https://idp.example.com',
+    identity_auth_issuer_backend: 'https://idp.internal.example.com',
+    ...overrides,
+  })
+
+  it('writes the provider config under global.identity.auth', () => {
+    const out = transformAnswers(base())
+    expect(out.global.identity.auth.enabled).toBe(true)
+    expect(out.global.identity.auth.type).toBe('MICROSOFT')
+    expect(out.global.identity.auth.issuer).toBe('https://idp.example.com')
+    expect(out.global.identity.auth.issuerBackendUrl).toBe('https://idp.internal.example.com')
+  })
+
+  it('writes only the client blocks for products actually selected', () => {
+    const out = transformAnswers(base({
+      oidc_identity_client_id: 'ident',
+      oidc_console_client_id: 'con',
+      oidc_optimize_client_id: 'opt',
+      oidc_wm_client_id: 'wm',
+    }))
+    expect(out.global.identity.auth.identity.clientId).toBe('ident')
+    // Console, Optimize and Web Modeler are not selected — their client fields
+    // are hidden, so their answers must not reach the output.
+    expect(out.global.identity.auth.console).toBeUndefined()
+    expect(out.global.identity.auth.optimize).toBeUndefined()
+    expect(out.global.identity.auth.webModeler).toBeUndefined()
+  })
+
+  it('writes nothing at all when authentication is left disabled', () => {
+    const out = transformAnswers(base({ identity_auth_enabled: false, identity_auth_type: undefined }))
+    expect(out.global?.identity?.auth?.type).toBeUndefined()
+    expect(out.global?.identity?.auth?.issuer).toBeUndefined()
+  })
+
+  it('nests the client secret under .secret on 8.9 and flattens it on 8.7', () => {
+    const on89 = transformAnswers(base({ chartVersion: '8.9', oidc_identity_secret_secret_mode: 'Existing secret', oidc_identity_secret_existing_secret: 'creds', oidc_identity_secret_existing_secret_key: 'k' }))
+    expect(on89.global.identity.auth.identity.secret.existingSecret).toBe('creds')
+    expect(on89.global.identity.auth.identity.secret.existingSecretKey).toBe('k')
+
+    const on87 = transformAnswers(base({ chartVersion: '8.7', oidc_identity_secret_secret_mode: 'Existing secret', oidc_identity_secret_existing_secret: 'creds', oidc_identity_secret_existing_secret_key: 'k' }))
+    expect(on87.global.identity.auth.identity.existingSecret).toBe('creds')
+    expect(on87.global.identity.auth.identity.existingSecretKey).toBe('k')
+    expect(on87.global.identity.auth.identity.secret).toBeUndefined()
+  })
+
+  it('drops an inline client secret on 8.7, which has no inline option at all', () => {
+    const out = transformAnswers(base({ chartVersion: '8.7', oidc_identity_secret: 'plaintext' }))
+    expect(out.global.identity.auth.identity?.secret).toBeUndefined()
+    expect(JSON.stringify(out)).not.toContain('plaintext')
+  })
+})
+
+describe('external Management Identity', () => {
+  it('satisfies the Console requirement without deploying Identity', () => {
+    // The chart's rule is
+    // (or .Values.identity.enabled .Values.global.identity.service.url) —
+    // verified by rendering Console with only the URL set.
+    const constraint = displayConfig.constraints.find((c) => c.id === 'consoleNeedsIdentity')
+    expect(constraint.violated({ products: ['console'] })).toBe(true)
+    expect(constraint.violated({ products: ['console'], external_identity_url: 'https://identity.example.com' })).toBe(false)
+  })
+
+  it('satisfies the Web Modeler requirement the same way', () => {
+    const constraint = displayConfig.constraints.find((c) => c.id === 'webModelerNeedsIdentity')
+    expect(constraint.violated({ products: ['webModeler'] })).toBe(true)
+    expect(constraint.violated({ products: ['webModeler'], external_identity_url: 'https://identity.example.com' })).toBe(false)
+  })
+
+  it('does not force identity auth off on 8.7 when auth is wanted against an external Identity', () => {
+    // 8.7 forces global.identity.auth.enabled false whenever Identity is not
+    // selected, to stop the chart resolving a Keycloak that was never
+    // deployed. That must not fire when the user deliberately enabled auth
+    // against an external Identity instead.
+    const out = transformAnswers({
+      products: ['console'], chartVersion: '8.7',
+      external_identity_url: 'https://identity.example.com',
+      identity_auth_enabled: true,
+      identity_auth_type: 'GENERIC',
+      identity_auth_issuer: 'https://idp.example.com',
+      identity_auth_issuer_backend: 'https://idp.example.com',
+    })
+    expect(out.global.identity.auth.enabled).toBe(true)
+    expect(out.global.identity.service.url).toBe('https://identity.example.com')
+  })
+
+  it('still forces identity auth off on 8.7 with no Identity and no external URL', () => {
+    const out = transformAnswers({ products: ['connectors'], chartVersion: '8.7' })
+    expect(out.global.identity.auth.enabled).toBe(false)
+  })
+})
+
+describe('Identity client secret with Keycloak', () => {
+  // The chart fails outright if this secret is set while the provider is
+  // Keycloak, which issues the credential itself. Present on every release.
+  const constraint = () => displayConfig.constraints.find((c) => c.id === 'identityClientSecretWithKeycloak')
+
+  it('rejects an inline secret when the provider is KEYCLOAK', () => {
+    expect(constraint().violated({
+      identity_auth_enabled: true, identity_auth_type: 'KEYCLOAK', oidc_identity_secret: 'x',
+    })).toBe(true)
+  })
+
+  it('rejects an existing-secret reference the same way', () => {
+    expect(constraint().violated({
+      identity_auth_enabled: true, identity_auth_type: 'KEYCLOAK', oidc_identity_secret_existing_secret: 'creds',
+    })).toBe(true)
+  })
+
+  it('allows the same secret under MICROSOFT or GENERIC', () => {
+    for (const type of ['MICROSOFT', 'GENERIC']) {
+      expect(constraint().violated({
+        identity_auth_enabled: true, identity_auth_type: type, oidc_identity_secret: 'x',
+      }), type).toBe(false)
+    }
+  })
+
+  it('allows KEYCLOAK with no secret set', () => {
+    expect(constraint().violated({ identity_auth_enabled: true, identity_auth_type: 'KEYCLOAK' })).toBe(false)
+  })
+})
+
 // ─── 10. Output is always valid YAML ──────────────────────────────────────────
 
 describe('serialisation', () => {

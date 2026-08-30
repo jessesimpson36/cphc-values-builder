@@ -346,6 +346,50 @@ export const scenarios = [
     },
   },
 
+  // ── Identity OIDC ───────────────────────────────────────────────────────────
+  {
+    name: 'identity-oidc-entra',
+    description: 'Management Identity, Console and Optimize behind an external Microsoft Entra tenant.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration', 'identity', 'console', 'optimize'],
+      databaseType: 'elasticsearch',
+      ...es,
+      ...identityDb,
+      identity_auth_enabled: true,
+      identity_auth_type: 'MICROSOFT',
+      identity_auth_issuer: 'https://login.microsoftonline.com/TENANT/v2.0',
+      identity_auth_issuer_backend: 'https://login.microsoftonline.com/TENANT/v2.0',
+      identity_auth_token_url: 'https://login.microsoftonline.com/TENANT/oauth2/v2.0/token',
+      identity_auth_jwks_url: 'https://login.microsoftonline.com/TENANT/discovery/v2.0/keys',
+      oidc_identity_client_id: 'camunda-identity',
+      oidc_identity_secret: 'identity-client-secret',
+      oidc_identity_claim_name: 'oid',
+      oidc_identity_claim_value: '00000000-0000-0000-0000-000000000000',
+      oidc_console_client_id: 'camunda-console',
+      oidc_console_redirect: 'https://console.example.com',
+      oidc_optimize_client_id: 'camunda-optimize',
+      oidc_optimize_secret: 'optimize-client-secret',
+      oidc_optimize_redirect: 'https://optimize.example.com',
+    },
+  },
+  {
+    name: 'external-identity-console',
+    description: 'Console pointed at a Management Identity this release does not deploy.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration', 'console'],
+      databaseType: 'elasticsearch',
+      ...es,
+      external_identity_url: 'https://identity.example.com',
+      identity_auth_enabled: true,
+      identity_auth_type: 'GENERIC',
+      identity_auth_issuer: 'https://idp.example.com',
+      identity_auth_issuer_backend: 'https://idp.internal.example.com',
+      oidc_console_client_id: 'camunda-console',
+    },
+  },
+
   // ── Gateway API (8.9 only) ──────────────────────────────────────────────────
   {
     name: 'gateway-api-create-resource',
