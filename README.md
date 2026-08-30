@@ -21,7 +21,7 @@ The tool surfaces only the fields users actually need to configure, handles all 
 ## Features
 
 **Configuration**
-- **Multiple Camunda releases** — pick 8.8 or 8.9; the form, the validation and the generated file all follow the chart for that release
+- **Multiple Camunda releases** — pick 8.7, 8.8 or 8.9; the form, the validation and the generated file all follow the chart for that release, including 8.7's pre-merge Zeebe/Zeebe Gateway/Operate/Tasklist split
 - **Schema-driven UI** — the form builds itself from the official Camunda Helm chart values files. No fields are hardcoded
 - **Conditional sections** — only relevant configuration appears based on product selection
 - **Shared vs standalone database** — automatically shows the correct database section depending on which products are selected

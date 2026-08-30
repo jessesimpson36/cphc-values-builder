@@ -119,10 +119,72 @@ Adding a release is data, not code: vendor its `values.yaml`, add an entry to
 `camundaCharts`, and run `npm run parse`. Availability per release is derived,
 not hand-maintained.
 
-The releases currently supported share every path the form writes, which is why
-8.8 cost almost nothing to add. 8.7 predates the 8.8 values rewrite and is
-missing 57 of them, so it would need its own display config — that is the line
-where "add another release" stops being free.
+8.8 shares every path the form writes with 8.9, so it cost almost nothing to
+add. **8.7 does not** — it predates the 8.8 merge of Zeebe, Zeebe Gateway,
+Operate and Tasklist into one "Orchestration Cluster" component, and predates
+the `<base>.secret.{inlineSecret,existingSecret,existingSecretKey}` convention
+credentials use from 8.8 onward. Supporting it needed a second mechanism
+alongside `fieldApplies()`: `src/fieldPaths.js`.
+
+### field.paths — a field whose chart path differs by release
+
+`field.paths` overrides `field.path` for exactly the release keys it lists;
+every other release falls through to the default. `resolveFieldPath(field,
+version)` is the single place that resolves this, used by the UI, by
+`transform.js` when it writes a value, and by `scripts/parseValues.js` and
+`scripts/validatePaths.js` when they discover and check paths per release.
+It is pure and has no dependency on the generated schemas, so both the browser
+and the build-time parser can share it without a circular import.
+
+```js
+{ id: 'cluster_size', path: 'orchestration.clusterSize', paths: { '8.7': 'zeebe.clusterSize' }, ... }
+```
+
+An explicit `null` in `paths` means the release has no equivalent at all — not
+a typo. `secretFields()` uses this for ES/OS authentication: 8.7's chart has no
+`existingSecret`/`existingSecretKey` option for it whatsoever, only a
+plaintext `auth.password`. When `paths` resolves `existingSecret` to null for
+the selected release, the mode toggle and both existing-secret sub-fields
+disappear and the inline field renders unconditionally — a user is never
+offered a choice that would silently write nothing.
+
+Three concept families needed this, each verified against the real 8.7 chart
+rather than assumed:
+
+| Concept | 8.8/8.9 | 8.7 |
+|---|---|---|
+| Cluster sizing, resources, PVC | `orchestration.*` | `zeebe.*` |
+| gRPC ingress | `orchestration.ingress.grpc.*` | `zeebeGateway.ingress.grpc.*` |
+| Web Modeler's bundled database | `webModelerPostgresql.*` | `postgresql.*` |
+| ES/OS auth secret | `<base>.secret.{inlineSecret,existingSecret,existingSecretKey}` | `<base>.password` only — no existing-secret option |
+| Identity DB / license / Web Modeler DB & mail secrets | same as above | flat, and Identity's key is `existingSecretPasswordKey`, not `existingSecretKey` |
+
+**Not remapped, only hidden**, because the shapes do not correspond 1:1:
+
+- **OIDC per-component authentication** — no equivalent exists in 8.7's chart at all.
+- **`global.tls.caBundle`** — does not exist in 8.7.
+- **AWS S3 document-store credentials** — 8.7 uses one shared secret plus two
+  key-name fields (`existingSecret` + `accessKeyIdKey`/`secretAccessKeyKey`);
+  8.8+ uses two fully independent secret objects. IRSA still works on 8.7
+  since it needs no credentials at all.
+- **Web Modeler DB/mail existing-secret mode** — 8.7's chart documents
+  `existingSecret` there as accepting a string *or* an object with different
+  meaning (a bare string is "treated as a literal password", not a secret
+  reference). Writing the wrong shape would silently misconfigure the
+  deployment, so only the inline password is offered on 8.7 for these two.
+
+**Two chart-default differences, not path differences**, that would otherwise
+break every non-Identity deployment on 8.7: `identityKeycloak.enabled` and
+`global.identity.auth.enabled` both default to `true` on 8.7 (both default to
+`false` from 8.8 onward). `transform.js` forces both off explicitly whenever
+Identity is not selected — found by `helm template` failing deep inside a
+Keycloak-URL-resolution helper with an error that named `.Release.Name` as the
+culprit, nothing about Keycloak at all.
+
+A section whose only fields are all unavailable on the selected release (the
+merged Orchestration Cluster Environment Variables section, on 8.7) is hidden
+by `sectionHasVisibleFields()` in `chartVersions.js` rather than rendering as
+an empty card with just a title.
 
 ## Comparing a values.yaml across releases
 

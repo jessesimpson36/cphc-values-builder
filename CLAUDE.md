@@ -94,6 +94,26 @@ the file header and in `docs/architecture.md`. If you change them, update
 
 Never present sizing output as a guarantee; the p25–p75 spread is a factor of three.
 
+### Supporting a release whose chart paths genuinely differ (field.paths)
+
+`src/fieldPaths.js`'s `resolveFieldPath(field, version)` lets a field write to
+a different chart path per release: `{ path: 'orchestration.clusterSize',
+paths: { '8.7': 'zeebe.clusterSize' } }`. An explicit `null` in `paths` means
+that release has no equivalent at all (used by `secretFields()` for ES/OS auth
+on 8.7, which has no existing-secret option). Pure, no dependency on the
+generated schemas, so both the browser and `scripts/parseValues.js` can use it
+without a circular import. `mapFieldsToHelm`, `parseValues.js` and
+`validatePaths.js` all resolve through it — never read `field.path` directly
+when the release matters.
+
+8.7 needed this because it predates Camunda 8.8's merge of Zeebe, Zeebe
+Gateway, Operate and Tasklist into one Orchestration Cluster component, and
+predates the `<base>.secret.*` credential convention entirely. It also has two
+chart-default differences from 8.8+ that are NOT path differences:
+`identityKeycloak.enabled` and `global.identity.auth.enabled` both default to
+`true` on 8.7 (false on 8.8+) — `transform.js` forces both off when Identity
+is not selected, or every non-Identity deployment fails to install.
+
 ### Multi-region
 
 The chart cannot compute initial contact points in multi-region mode (it has no way to
