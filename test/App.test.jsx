@@ -332,6 +332,54 @@ describe('cross-component constraints', () => {
     clickOption('rdbms')
     expect(screen.getByText('RDBMS Configuration')).toBeDefined()
   })
+
+  it('blocks Gateway API combined with Ingress', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByText('Enable Ingress'))
+    fireEvent.click(screen.getByText('Enable Gateway API (instead of Ingress)'))
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText(/Gateway API and Ingress cannot both be enabled/)).toBeDefined()
+  })
+
+  it('hides the Gateway API toggle entirely on a release that does not have it', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '8.7' }))
+    selectProduct('Orchestration Cluster')
+    // global.gateway does not exist on 8.7 at all, so the field is hidden by
+    // the same generic mechanism that hides OIDC there — no constraint needed
+    // to keep a user from reaching it in the first place.
+    expect(screen.queryByText('Enable Gateway API (instead of Ingress)')).toBeNull()
+  })
+
+  it('blocks Gateway API left over from 8.9 after switching to a release without it', () => {
+    // The checkbox is hidden once switched, but the answer persists in state -
+    // the same resilience the tool relies on when a user swaps sections back
+    // and forth. This is the path that actually reaches gatewayRequires89.
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByText('Enable Gateway API (instead of Ingress)'))
+
+    fireEvent.click(screen.getByRole('button', { name: '8.7' }))
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText(/Gateway API requires Camunda 8.9/)).toBeDefined()
+  })
+
+  it('switches between creating a Gateway and referencing an existing one', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByText('Enable Gateway API (instead of Ingress)'))
+
+    // Matches the chart's own default (createGatewayResource: false) —
+    // Gateway API is commonly a shared, pre-existing resource one platform
+    // team manages, not something each release creates for itself.
+    expect(screen.getByText('Existing Gateway name')).toBeDefined()
+    expect(screen.queryByText('GatewayClass')).toBeNull()
+
+    fireEvent.click(screen.getByText(/Create the Gateway resource/))
+    expect(screen.queryByText('Existing Gateway name')).toBeNull()
+    expect(screen.getByText('GatewayClass')).toBeDefined()
+  })
 })
 
 describe('generated output', () => {
