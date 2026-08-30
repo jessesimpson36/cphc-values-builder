@@ -346,6 +346,37 @@ export const scenarios = [
     },
   },
 
+  // ── Gateway API (8.9 only) ──────────────────────────────────────────────────
+  {
+    name: 'gateway-api-create-resource',
+    description: 'Gateway API creating its own Gateway resource, as an alternative to Ingress.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration'],
+      databaseType: 'elasticsearch',
+      ...es,
+      gateway_enabled: true,
+      gateway_create_resource: true,
+      gateway_class: 'nginx',
+      gateway_tls_enabled: true,
+      gateway_tls_secret: 'camunda-tls',
+    },
+  },
+  {
+    name: 'gateway-api-existing-gateway',
+    description: 'Gateway API referencing a Gateway resource that already exists elsewhere.',
+    answers: {
+      chartVersion: '8.9',
+      products: ['orchestration'],
+      databaseType: 'elasticsearch',
+      ...es,
+      gateway_enabled: true,
+      gateway_create_resource: false,
+      gateway_name: 'shared-gateway',
+      gateway_namespace: 'gateway-infra',
+    },
+  },
+
   // ── RDBMS secondary storage (8.9 only) ──────────────────────────────────────
   {
     name: 'rdbms-secondary-storage',

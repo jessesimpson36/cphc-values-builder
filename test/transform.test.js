@@ -525,6 +525,67 @@ describe('RDBMS constraints', () => {
   })
 })
 
+// ─── 9b. Gateway API (8.9 only) ────────────────────────────────────────────────
+//
+// global.gateway does not exist on 8.7 or 8.8 at all (verified against both
+// vendored schemas). The chart itself rejects Gateway API and Ingress both
+// being enabled — confirmed by rendering that exact combination — mirrored
+// here as a constraint so the user sees it in the form instead.
+
+describe('Gateway API', () => {
+  it('creates its own Gateway resource when asked to', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], chartVersion: '8.9', databaseType: 'elasticsearch',
+      es_host: 'es.example.com', es_password: 'secret',
+      gateway_enabled: true, gateway_create_resource: true, gateway_class: 'nginx',
+    })
+    expect(out.global.gateway.enabled).toBe(true)
+    expect(out.global.gateway.createGatewayResource).toBe(true)
+    expect(out.global.gateway.className).toBe('nginx')
+    expect(out.global.gateway.name).toBeUndefined()
+  })
+
+  it('references an existing Gateway by name and namespace instead', () => {
+    const out = transformAnswers({
+      products: ['orchestration'], chartVersion: '8.9', databaseType: 'elasticsearch',
+      es_host: 'es.example.com', es_password: 'secret',
+      gateway_enabled: true, gateway_create_resource: false,
+      gateway_name: 'shared-gateway', gateway_namespace: 'gateway-infra',
+    })
+    expect(out.global.gateway.createGatewayResource).toBe(false)
+    expect(out.global.gateway.name).toBe('shared-gateway')
+    expect(out.global.gateway.namespace).toBe('gateway-infra')
+    expect(out.global.gateway.className).toBeUndefined()
+  })
+
+  it('explicitly disables Gateway API when left unchecked, on 8.9', () => {
+    const out = transformAnswers({ products: ['orchestration'], chartVersion: '8.9', databaseType: 'elasticsearch' })
+    expect(out.global.gateway.enabled).toBe(false)
+  })
+
+  it('never writes global.gateway on 8.7 or 8.8, where the path does not exist', () => {
+    for (const version of ['8.7', '8.8']) {
+      const out = transformAnswers({ products: ['orchestration'], chartVersion: version, databaseType: 'elasticsearch' })
+      expect(out.global.gateway, version).toBeUndefined()
+    }
+  })
+})
+
+describe('Gateway API constraints', () => {
+  it('rejects Gateway API combined with Ingress — the chart enforces exactly one', () => {
+    const constraint = displayConfig.constraints.find((c) => c.id === 'gatewayIncompatibleWithIngress')
+    expect(constraint.violated({ gateway_enabled: true, ingress_enabled: true })).toBe(true)
+    expect(constraint.violated({ gateway_enabled: true, ingress_enabled: false })).toBe(false)
+  })
+
+  it('rejects Gateway API on any release other than 8.9', () => {
+    const constraint = displayConfig.constraints.find((c) => c.id === 'gatewayRequires89')
+    expect(constraint.violated({ gateway_enabled: true, chartVersion: '8.8' })).toBe(true)
+    expect(constraint.violated({ gateway_enabled: true, chartVersion: '8.9' })).toBe(false)
+    expect(constraint.violated({ gateway_enabled: true })).toBe(false)
+  })
+})
+
 // ─── 10. Output is always valid YAML ──────────────────────────────────────────
 
 describe('serialisation', () => {

@@ -47,6 +47,8 @@ global:
     enabled: false
   ingress:
     enabled: false
+  gateway:
+    enabled: false
   security:
     authentication:
       method: oidc

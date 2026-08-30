@@ -3,18 +3,6 @@ orchestration:
   ingress:
     grpc:
       enabled: false
-  clusterSize: '8'
-  partitionCount: '24'
-  replicationFactor: '4'
-  pvcSize: 128Gi
-  pvcStorageClassName: premium-rwo
-  resources:
-    requests:
-      cpu: 4000m
-      memory: 8Gi
-    limits:
-      cpu: 6000m
-      memory: 12Gi
 optimize:
   enabled: false
 identity:
@@ -48,6 +36,9 @@ global:
   ingress:
     enabled: false
   gateway:
-    enabled: false
+    enabled: true
+    createGatewayResource: false
+    name: shared-gateway
+    namespace: gateway-infra
 elasticsearch:
   enabled: false

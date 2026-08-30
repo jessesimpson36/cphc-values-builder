@@ -29,6 +29,7 @@ The tool surfaces only the fields users actually need to configure, handles all 
 - **Cross-component validation** — the chart's own constraints (Console and Web Modeler require Identity, and so on) are checked in the form instead of at `helm install`
 - **Import an existing values.yaml** — load a file you deployed earlier, change one thing, regenerate. Anything the form cannot represent is reported rather than silently dropped
 - **RDBMS secondary storage** (8.9+) — configure Orchestration Cluster on PostgreSQL, MySQL, Oracle or SQL Server instead of Elasticsearch/OpenSearch, including AWS Aurora IRSA authentication
+- **Gateway API** (8.9+) — the Kubernetes Gateway API as an alternative to Ingress, creating a Gateway resource or referencing an existing shared one
 
 **Production concerns**
 - **Cluster sizing from a throughput target** — enter "1000 process instances per second" and get broker count, partition count, replication factor and resources, calibrated against Camunda's benchmark data

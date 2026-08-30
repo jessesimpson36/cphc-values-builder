@@ -198,6 +198,15 @@ function applyProductFlags(helmValues, answers) {
   if (selected.includes("orchestration") && !answers.grpc_enabled) {
     helmValues = setNestedValue(helmValues, `${grpcIngressBase(answers)}.enabled`, false)
   }
+  // Same reasoning as Ingress above - an untouched checkbox is undefined, which
+  // mapFieldsToHelm skips entirely, silently leaving it at the chart default
+  // instead of an explicit false. global.gateway does not exist before 8.9 at
+  // all, so this is guarded the same way the RDBMS write is: the constraint
+  // gatewayRequires89 keeps the UI from reaching this combination, but a
+  // direct transformAnswers call (tests, the path validator) still could.
+  if (!answers.gateway_enabled && selectedVersion(answers) === "8.9") {
+    helmValues = setNestedValue(helmValues, "global.gateway.enabled", false)
+  }
 
   return helmValues
 }
