@@ -14,7 +14,7 @@
  *   4. cleanObject        — remove empty, null, and undefined values
  */
 
-import { displayConfig, isFieldVisible, FIRST_USER_CREATE } from "./displayConfig.js"
+import { displayConfig, isFieldVisible } from "./displayConfig.js"
 import { calculateSizing } from "./sizing.js"
 
 // ─── Utility: set a value in a nested object using a dot-notation path ────────
@@ -68,15 +68,6 @@ function applyProductFlags(helmValues, answers) {
     // use external database, disable bundled keycloak postgresql
     helmValues = setNestedValue(helmValues, "identity.externalDatabase.enabled", true)
     helmValues = setNestedValue(helmValues, "identityPostgresql.enabled", false)
-
-    // Always written explicitly. The chart defaults this to true with username
-    // "demo" and no password, so saying nothing is itself a decision — and the
-    // wrong one for anything reachable from outside a laptop.
-    helmValues = setNestedValue(
-      helmValues,
-      "identity.firstUser.enabled",
-      answers.first_user_mode === FIRST_USER_CREATE,
-    )
   } else {
     helmValues = setNestedValue(helmValues, "identityPostgresql.enabled", false)
   }

@@ -11,7 +11,7 @@
  * minimal override file, so a file this tool produced round-trips exactly.
  */
 
-import { displayConfig, FIRST_USER_CREATE, FIRST_USER_NONE } from './displayConfig.js'
+import { displayConfig } from './displayConfig.js'
 
 // ─── Read a dot-notation path out of a nested object ─────────────────────────
 
@@ -120,17 +120,6 @@ export function importValues(values) {
     answers.auth_method = 'oidc'
   }
 
-  if (answers.products.includes('identity')) {
-    // The form makes this an explicit choice, so map the chart's boolean onto
-    // it. An absent key means the chart default, which is to create the user.
-    const firstUser = getNestedValue(values, 'identity.firstUser.enabled')
-    answers.first_user_mode = firstUser === false ? FIRST_USER_NONE : FIRST_USER_CREATE
-
-    if (firstUser !== false && !getNestedValue(values, 'identity.firstUser.username')) {
-      warnings.push('This file relies on the default bootstrap user "demo" with no password. Set a username and password before deploying it.')
-    }
-  }
-
   // Every declared field, by its path.
   const mappedPaths = new Set()
 
@@ -184,7 +173,6 @@ export function importValues(values) {
 // Paths written by applyProductFlags / applyDerivedValues rather than by a field.
 const DERIVED_PATH_PATTERNS = [
   /^[a-zA-Z]+\.enabled$/,
-  /^identity\.firstUser\.enabled$/,
   /^global\.(elasticsearch|opensearch)\.(enabled|external)$/,
   /^global\.opensearch\.aws\.enabled$/,
   /^identity\.externalDatabase\.enabled$/,

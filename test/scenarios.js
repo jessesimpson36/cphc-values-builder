@@ -39,18 +39,6 @@ const identityDb = {
   identity_db_name: 'identity',
 }
 
-// Every Identity deployment must decide about the bootstrap admin. The chart
-// default is a user called "demo" with no password, so a scenario that stays
-// silent is testing the wrong thing.
-const identityFirstUser = {
-  first_user_mode: 'Create an administrator',
-  first_user_username: 'admin',
-  first_user_email: 'admin@example.com',
-  first_user_first_name: 'Cluster',
-  first_user_last_name: 'Admin',
-  first_user_password: 'first-user-secret',
-}
-
 const webModelerMail = {
   wm_mail_from_address: 'camunda@example.com',
   wm_mail_from_name: 'Camunda 8',
@@ -113,7 +101,6 @@ export const scenarios = [
     answers: {
       products: ['identity'],
       ...identityDb,
-      ...identityFirstUser,
     },
   },
   {
@@ -122,7 +109,6 @@ export const scenarios = [
     answers: {
       products: ['webModeler', 'identity'],
       ...identityDb,
-      ...identityFirstUser,
       ...webModelerDb,
       ...webModelerMail,
       webModeler_restapi_env: [{ name: 'LOGGING_LEVEL_IO_CAMUNDA', value: 'DEBUG' }],
@@ -135,7 +121,6 @@ export const scenarios = [
     answers: {
       products: ['connectors', 'console', 'identity'],
       ...identityDb,
-      ...identityFirstUser,
       connectors_env: [{ name: 'CAMUNDA_CONNECTOR_POLLING_ENABLED', value: 'true' }],
     },
   },
@@ -167,7 +152,6 @@ export const scenarios = [
       isOpenShift: true,
       ...es,
       ...identityDb,
-      ...identityFirstUser,
       ...webModelerDb,
       ...webModelerMail,
       orchestration_env: [{ name: 'ZEEBE_BROKER_CLUSTER_PARTITIONSCOUNT', value: '3' }],
@@ -299,12 +283,6 @@ export const scenarios = [
       identity_db_password_secret_mode: 'Existing secret',
       identity_db_password_existing_secret: 'camunda-identity-db',
       identity_db_password_existing_secret_key: 'password',
-      first_user_mode: 'Create an administrator',
-      first_user_username: 'admin',
-      first_user_email: 'admin@example.com',
-      first_user_password_secret_mode: 'Existing secret',
-      first_user_password_existing_secret: 'camunda-first-user',
-      first_user_password_existing_secret_key: 'password',
       license_secret_mode: 'Existing secret',
       license_existing_secret: 'camunda-license',
       license_existing_secret_key: 'license-key',
@@ -327,16 +305,6 @@ export const scenarios = [
     },
   },
 
-  {
-    name: 'identity-no-bootstrap-user',
-    description: 'Identity with no initial administrator — users come from the external IdP instead.',
-    answers: {
-      products: ['identity'],
-      ...identityDb,
-      first_user_mode: 'No initial user',
-    },
-  },
-
   // ── Everything ─────────────────────────────────────────────────────────────
   {
     name: 'production-full-stack',
@@ -346,7 +314,6 @@ export const scenarios = [
       databaseType: 'elasticsearch',
       ...es,
       ...identityDb,
-      ...identityFirstUser,
       ...webModelerDb,
       ...webModelerMail,
       sizing_mode: 'Throughput target',
