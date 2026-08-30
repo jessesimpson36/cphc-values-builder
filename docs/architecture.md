@@ -14,24 +14,28 @@ This tool asks for the forty and derives the rest.
 ## Data flow
 
 ```
-public/values.yaml            vendored copy of one published chart release
-package.json  camundaChart    which release that is
+public/charts/<release>/values.yaml   vendored copy of one published chart
+package.json  camundaCharts           which releases are supported
        │
        ▼  npm run parse  (scripts/parseValues.js)
-src/schema.json               flat [{ path, default, type, description }] x984
-src/chartMeta.json            chart version, surfaced in the UI footer
+src/schemas/<release>.json            full schema per release, ~1000 entries.
+                                      Build-time only — npm run validate.
+src/uiSchema.json                     compact: the ~100 paths the form writes,
+                                      their descriptions, and which releases
+                                      have each. The only one the browser loads.
        │
        ▼
-src/displayConfig.js          which paths the user sees, and when
+src/displayConfig.js                  which paths the user sees, and when
+src/chartVersions.js                  which release the output targets
        │
        ▼
-src/App.jsx                   renders the form; holds a flat `answers` object
-       │                      ◄── src/importValues.js reverses this step
+src/App.jsx                           renders the form; holds a flat `answers`
+       │                              ◄── src/importValues.js reverses this step
        ▼
-src/transform.js              answers → nested Helm values object
-src/sizing.js                 throughput target → cluster topology
+src/transform.js                      answers → nested Helm values object
+src/sizing.js                         throughput target → cluster topology
        │
-       ▼  yaml.dump
+       ▼  src/yaml.js
 values.yaml
 ```
 
@@ -40,14 +44,31 @@ Nothing about the form is hardcoded in `App.jsx`. It walks
 renders a `Field` per entry. Adding a field means editing `displayConfig.js`
 only.
 
+### Why two generated schemas
+
+A full chart schema is around 200KB. Importing one per supported release would
+grow the bundle every time a Camunda version is added, for data the browser
+barely uses — the UI only needs a description per *displayed* path, plus which
+releases contain it. `uiSchema.json` is that, at roughly 25KB regardless of how
+many releases are supported. The full schemas stay on disk for `npm run
+validate`, which runs in Node.
+
+`displayConfig.js` deliberately does **not** import `chartVersions.js`, so that
+`scripts/parseValues.js` can import `displayConfig` to build `uiSchema.json`
+without a circular dependency. The two concerns are combined by `fieldApplies()`
+in `chartVersions.js`, which is what the UI, validation and `transform.js` all
+call.
+
 ## The four contracts
 
-**1. Every `field.path` must exist in the chart.** A typo does not crash
-anything — it writes a key the chart ignores, and the user's deployment quietly
-behaves nothing like they configured it. `npm run validate` imports
-`displayConfig.js` and `transform.js`, collects every path either can emit
-(including paths built at runtime by the `secretFields` helper), and checks them
-against `schema.json`. `path: null` marks a UI-only field.
+**1. Every `field.path` must exist in the chart — in every release that shows
+it.** A typo does not crash anything: it writes a key the chart ignores, and the
+user's deployment quietly behaves nothing like they configured it.
+`npm run validate` imports `displayConfig.js` and `transform.js`, collects every
+path either can emit (including paths built at runtime by the `secretFields`
+helper), and checks them against each release's schema. `path: null` marks a
+UI-only field. A path present in only some releases is hidden in the others,
+recorded automatically by `npm run parse`.
 
 **2. `field.id` keys the flat `answers` object**, independently of `path`.
 `showIf` predicates read `answers` by id. IDs are deliberately reused across
@@ -81,6 +102,27 @@ Five ordered steps:
 `applyProductFlags` holds the implicit chart knowledge. **Adding a product to
 `displayConfig.products` also requires adding its `enabled` branch there** — the
 two lists are coupled by hand, and a test guards the coupling.
+
+## Supporting several Camunda releases
+
+Camunda supports several minor versions at once, and their charts differ — keys
+get renamed, removed, or newly required between releases. A generated file is
+only meaningful for one of them, so the target release is part of the form
+rather than a property of the build.
+
+Choosing a release changes what is rendered, what is required, and what is
+written. `fieldApplies(field, answers)` is the single question all three ask,
+and it is false when the section is hidden, the field's own `showIf` is false,
+**or** the selected release does not have the path.
+
+Adding a release is data, not code: vendor its `values.yaml`, add an entry to
+`camundaCharts`, and run `npm run parse`. Availability per release is derived,
+not hand-maintained.
+
+The releases currently supported share every path the form writes, which is why
+8.8 cost almost nothing to add. 8.7 predates the 8.8 values rewrite and is
+missing 57 of them, so it would need its own display config — that is the line
+where "add another release" stops being free.
 
 ## Multi-region
 
@@ -138,13 +180,19 @@ is a factor of three. The UI says so.
 
 | Command | What it proves |
 |---|---|
-| `npm run validate` | Every path the tool can emit exists in the chart |
+| `npm run validate` | Every path the tool can emit exists in every supported release |
 | `npm test` | Output matches the reviewed golden files; sizing, import and round-trip behave |
-| `npm run verify:helm` | The chart actually **accepts** the generated file |
+| `npm run verify:helm` | Every chart actually **accepts** the generated file |
 
 `test/scenarios.js` is the single source of deployment shapes. Each scenario is
-both unit-tested against `test/golden/<name>.yaml` and rendered through
-`helm template` — so a scenario that is unit-tested is also proven to install.
+unit-tested against `test/golden/<name>.yaml` and rendered through
+`helm template` against **every** supported release — so a scenario that is
+unit-tested is also proven to install, on each release the tool offers.
+
+Golden files are recorded for the default release only. Cross-release behaviour
+is covered by `test/chartVersions.test.js` and by the helm matrix, which would
+otherwise multiply the golden files by the number of releases for very little
+extra signal.
 
 Golden files are committed so a change to `transform.js` shows up as a
 reviewable YAML diff in the pull request. Re-record with `npm test -- -u` and
@@ -153,24 +201,29 @@ reviewable YAML diff in the pull request. Re-record with `npm test -- -u` and
 `npm run verify:helm` needs `helm` on PATH and network access to
 `https://helm.camunda.io`. It runs in its own CI job.
 
-## Upgrading to a new chart version
+## Supporting a new chart version
 
-1. `helm show values camunda/camunda-platform --version <new> > public/values.yaml`
-2. Update `camundaChart.version` and `appVersion` in `package.json`
-3. `npm run parse`
-4. `npm run validate` — this flags paths the new chart renamed or removed
-5. Reconcile `displayConfig.js` against anything it reports
+1. `mkdir -p public/charts/<release>`
+2. `helm show values camunda/camunda-platform --version <new> > public/charts/<release>/values.yaml`
+3. Add an entry to `camundaCharts` in `package.json`. **The first entry is the
+   UI default**, so put a new stable release at the top.
+4. `npm run parse` — writes the new schema and reports any displayed path the
+   release does not have
+5. `npm run validate` — checks every release
 6. `npm test -- -u` and review the golden diff
-7. `npm run verify:helm` — catches new required values and new cross-component
-   constraints
-8. Commit `public/values.yaml`, `src/schema.json`, `src/chartMeta.json`,
-   `package.json` and the golden files together
+7. `npm run verify:helm` — renders every scenario against every chart, catching
+   newly required values and new cross-component constraints
+8. Commit `public/charts/`, `src/schemas/`, `src/uiSchema.json`, `package.json`
+   and the golden files together
 
-Renovate is configured to ignore `public/values.yaml`; bumping an image tag
-inside it would desynchronise the vendored copy from the chart that
-`schema.json` was generated from.
+To drop a release, remove its entry and its directory, then re-run `npm run
+parse`.
 
-Steps 4 and 7 are not optional. The 14.8.5 upgrade removed
+Renovate is configured to ignore `public/charts/`; bumping an image tag inside a
+vendored values file would desynchronise it from the chart that its schema was
+generated from.
+
+Steps 5 and 7 are not optional. The 14.8.5 upgrade removed
 `webModeler.webapp.env` and revealed that `webModeler.restapi.mail.fromAddress`
 is mandatory — neither would have been noticed without them.
 

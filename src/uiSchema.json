@@ -1,0 +1,679 @@
+{
+  "defaultVersion": "8.9",
+  "versions": [
+    {
+      "key": "8.9",
+      "chart": "camunda-platform",
+      "version": "14.8.5",
+      "appVersion": "8.9",
+      "repository": "https://helm.camunda.io"
+    },
+    {
+      "key": "8.8",
+      "chart": "camunda-platform",
+      "version": "13.12.8",
+      "appVersion": "8.8",
+      "repository": "https://helm.camunda.io"
+    }
+  ],
+  "fields": {
+    "connectors.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/connectors/connectors-configuration/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "console.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/console/configuration/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.accessKeyId.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the access key ID.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.accessKeyId.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.accessKeyId.secret.inlineSecret": {
+      "description": "can be used to provide the access key ID as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.bucket": {
+      "description": "Name of the AWS S3 bucket.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.bucketPath": {
+      "description": "can be used to define a key prefix within the S3 bucket (for example documents/invoices), not an endpoint URL.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.irsa.enabled": {
+      "description": "if true, no static AWS credentials are injected into pods, so the AWS SDK resolves credentials through its default provider chain; this supports both IRSA and EKS Pod Identity. If false (default), credentials are required via existingSecret or accessKeyId/secretAccessKey configuration.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.region": {
+      "description": "AWS region for the S3 bucket. (example: us-east-1)",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.secretAccessKey.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the secret access key.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.secretAccessKey.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.aws.secretAccessKey.secret.inlineSecret": {
+      "description": "can be used to provide the secret access key as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.gcp.bucket": {
+      "description": "Name of the GCP bucket.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.gcp.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the service account JSON.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.documentStore.type.gcp.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.auth.secret.existingSecret": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.auth.secret.existingSecret or orchestration.data.secondaryStorage.elasticsearch.auth.secret.existingSecret) can be used to reference an existing Kubernetes Secret containing the password.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.auth.secret.existingSecretKey": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.auth.secret.existingSecretKey or orchestration.data.secondaryStorage.elasticsearch.auth.secret.existingSecretKey) defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.auth.secret.inlineSecret": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.auth.secret.inlineSecret or orchestration.data.secondaryStorage.elasticsearch.auth.secret.inlineSecret) can be used to provide the password as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.auth.username": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.auth.username or orchestration.data.secondaryStorage.elasticsearch.auth.username) the username for external elasticsearch",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.tls.enabled": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.tls.enabled or orchestration.data.secondaryStorage.elasticsearch.tls) if true, enable tls for external elasticsearch",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.url.host": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.host or orchestration.data.secondaryStorage.elasticsearch.url) Elasticsearch.host defines the elasticsearch host, ideally the service name inside the namespace",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.url.port": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.port or orchestration.data.secondaryStorage.elasticsearch.url) Elasticsearch.port defines the elasticsearch port, under which elasticsearch can be accessed",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.elasticsearch.url.protocol": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.protocol or orchestration.data.secondaryStorage.elasticsearch.url) defines the elasticsearch access protocol.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.ingress.className": {
+      "description": "Ingress.className defines the class or configuration of ingress which should be used by the controller",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.ingress.enabled": {
+      "description": "if true, an ingress resource is deployed. Only useful if an ingress controller is available, like Ingress-NGINX.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.ingress.host": {
+      "description": "(DEPRECATED - use global.host instead) If not specified the rules applies to all inbound http traffic, if specified the rule applies to that host. Supports templating (e.g., {{ .Release.Name }}.example.com).",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.ingress.tls.enabled": {
+      "description": "if true, then tls is configured on the ingress resource. If enabled the Ingress.host need to be defined.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.ingress.tls.secretName": {
+      "description": "defines the secret name which contains the TLS private key and certificate",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.license.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the license.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.license.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.license.secret.inlineSecret": {
+      "description": "can be used to provide the license as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.auth.secret.existingSecret": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.auth.secret.existingSecret or orchestration.data.secondaryStorage.opensearch.auth.secret.existingSecret) can be used to reference an existing Kubernetes Secret containing the password.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.auth.secret.existingSecretKey": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.auth.secret.existingSecretKey or orchestration.data.secondaryStorage.opensearch.auth.secret.existingSecretKey) defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.auth.secret.inlineSecret": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.auth.secret.inlineSecret or orchestration.data.secondaryStorage.opensearch.auth.secret.inlineSecret) can be used to provide the password as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.auth.username": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.auth.username or orchestration.data.secondaryStorage.opensearch.auth.username) the username for external opensearch",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.tls.enabled": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.tls.enabled or orchestration.data.secondaryStorage.opensearch.tls) if true, enable tls for external opensearch",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.url.host": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.host or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch host, ideally the service name inside the namespace",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.url.port": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.port or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch port, under which opensearch can be accessed",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.opensearch.url.protocol": {
+      "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.protocol or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch access protocol",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.security.authentication.method": {
+      "description": "defines the authentication method which should be used. Possible values: basic, oidc. Could be overridden in each component.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.tls.caBundle.secret.existingSecret": {
+      "description": "name of an existing Kubernetes secret containing the PEM-encoded CA bundle. Empty disables the feature.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "global.tls.caBundle.secret.existingSecretKey": {
+      "description": "key within the secret that holds the PEM-encoded CA bundle.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/management-identity/miscellaneous/configuration-variables/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.database": {
+      "description": "The database name",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.host": {
+      "description": "Database host",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.port": {
+      "description": "Database port number",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the password.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.secret.inlineSecret": {
+      "description": "can be used to provide the password as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "identity.externalDatabase.username": {
+      "description": "Non-root username",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "optimize.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/optimize/configuration/system-configuration/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.clusterSize": {
+      "description": "defines the amount of brokers (=replicas), which are deployed via helm",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/orchestration-cluster/core-settings/configuration/properties/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.ingress.grpc.className": {
+      "description": "defines the class or configuration of ingress which should be used by the controller",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.ingress.grpc.enabled": {
+      "description": "if true, an ingress resource is deployed with the Zeebe gateway deployment. Only useful if an ingress controller is available, like nginx.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.ingress.grpc.host": {
+      "description": "can be used to define the host of the ingress rule. https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-rules",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.ingress.grpc.tls.enabled": {
+      "description": "if true, then tls is configured on the ingress resource. If enabled the Ingress.host need to be defined.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.ingress.grpc.tls.secretName": {
+      "description": "defines the secret name which contains the TLS private key and certificate",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.partitionCount": {
+      "description": "defines how many partitions are set up in the cluster",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.pvcSize": {
+      "description": "defines the persistent volume claim size, which is used by each broker pod https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.pvcStorageClassName": {
+      "description": "can be used to set the storage class name which should be used by the persistent volume claim.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.replicationFactor": {
+      "description": "defines how each partition is replicated, the value defines the number of nodes",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.resources.limits.cpu": {
+      "description": "",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.resources.limits.memory": {
+      "description": "",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.resources.requests.cpu": {
+      "description": "",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.resources.requests.memory": {
+      "description": "",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.audience": {
+      "description": "defines the audience, which is used by Orchestration Cluster.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.clientId": {
+      "description": "defines the client id, which is used by Orchestration Cluster in authentication flows.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.groupsClaim": {
+      "description": "can be used to set group claim.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.issuer": {
+      "description": "can be used to override `global.identity.auth.issuer`.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.redirectUrl": {
+      "description": "defines the root (or redirect) URL, which is used by Keycloak to access Tasklist.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the client secret.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.secret.inlineSecret": {
+      "description": "can be used to provide the client secret as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.type": {
+      "description": "can be used to override `global.identity.auth.type`.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "orchestration.security.authentication.oidc.usernameClaim": {
+      "description": "can be used to set username claim.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/modeler/web-modeler/configuration/ for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.database": {
+      "description": "The database name (used when url is not provided)",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.host": {
+      "description": "Database host (used when url is not provided)",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.port": {
+      "description": "Database port number (used when url is not provided)",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the password.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.secret.inlineSecret": {
+      "description": "can be used to provide the password as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.externalDatabase.user": {
+      "description": "(DEPRECATED - use webModeler.restapi.externalDatabase.username instead) defines the database user",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.fromAddress": {
+      "description": "defines the email address that will be displayed as the sender of emails sent by WebModeler",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.fromName": {
+      "description": "defines the name that will be displayed as the sender of emails sent by WebModeler",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.secret.existingSecret": {
+      "description": "can be used to reference an existing Kubernetes Secret containing the SMTP password.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.secret.existingSecretKey": {
+      "description": "defines the key within the existing secret object.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.secret.inlineSecret": {
+      "description": "can be used to provide the SMTP password as a plain-text value for non-production usage.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.smtpHost": {
+      "description": "defines the host name of the SMTP server to be used by WebModeler",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.smtpPort": {
+      "description": "defines the port number of the SMTP server",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.smtpTlsEnabled": {
+      "description": "if true, enforces TLS encryption for SMTP connections (using STARTTLS)",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.restapi.mail.smtpUser": {
+      "description": "can be used to provide a user for the SMTP server",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    },
+    "webModeler.websockets.env": {
+      "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/modeler/web-modeler/configuration/#configuration-of-the-websocket-component for more details.",
+      "versions": [
+        "8.9",
+        "8.8"
+      ]
+    }
+  }
+}

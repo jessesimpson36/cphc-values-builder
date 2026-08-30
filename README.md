@@ -21,7 +21,8 @@ The tool surfaces only the fields users actually need to configure, handles all 
 ## Features
 
 **Configuration**
-- **Schema-driven UI** — the form builds itself from the official Camunda Helm chart values file. No fields are hardcoded
+- **Multiple Camunda releases** — pick 8.8 or 8.9; the form, the validation and the generated file all follow the chart for that release
+- **Schema-driven UI** — the form builds itself from the official Camunda Helm chart values files. No fields are hardcoded
 - **Conditional sections** — only relevant configuration appears based on product selection
 - **Shared vs standalone database** — automatically shows the correct database section depending on which products are selected
 - **Automatic Helm flags** — required values like `enabled`, `external`, and bundled database flags are set without user input
@@ -40,7 +41,7 @@ The tool surfaces only the fields users actually need to configure, handles all 
 **Everyday**
 - **Environment variables** — dynamic per-product env var editor
 - **Field hints** — hover the `?` icon on any field to see its description pulled directly from the Helm chart
-- **Chart version shown** — the footer states exactly which chart release the output targets
+- **Chart version shown** — the footer states exactly which chart release the output targets, with the matching `helm install` command
 - **Three themes** — Dark, Light, and Camunda brand, persisted across sessions
 - **Copy or download** — export your `values.yaml` directly from the browser
 
@@ -89,9 +90,9 @@ is committed, so no build step is needed first.
 | `npm run lint` | ESLint |
 | `npm test` | Unit tests and golden files (`npm test -- -u` to re-record) |
 | `npm run validate` | Checks every Helm path the tool can emit exists in the chart |
-| `npm run verify:helm` | Renders every test scenario against the real chart (needs `helm`) |
-| `npm run parse` | Regenerates `src/schema.json` from `public/values.yaml` |
-| `npm run fixtures` | Writes a values.yaml per test scenario to `tmp/fixtures/` |
+| `npm run verify:helm` | Renders every test scenario against every supported chart (needs `helm`) |
+| `npm run parse` | Regenerates `src/schemas/` and `src/uiSchema.json` from `public/charts/` |
+| `npm run fixtures` | Writes a values.yaml per scenario per release to `tmp/fixtures/` |
 
 `npm run verify:helm` is the one that matters most: it proves the chart actually
 **accepts** the generated file. Unit tests only prove the output is what we intended.
@@ -121,19 +122,24 @@ you can carry it across by hand.
 │   ├── architecture.md          Architecture and developer guide — start here
 │   └── screenshots/             UI screenshots
 ├── public/
-│   └── values.yaml              Camunda Helm chart values (vendored, source of truth)
+│   └── charts/
+│       ├── 8.8/values.yaml      Vendored chart values, one directory per release
+│       └── 8.9/values.yaml
 ├── scripts/
-│   ├── parseValues.js           Extracts schema.json from values.yaml
-│   ├── validatePaths.js         Checks every emitted path against the chart
-│   ├── renderFixtures.js        Writes a values.yaml per test scenario
-│   └── helmTemplateCheck.sh     Renders those fixtures against the real chart
+│   ├── parseValues.js           Generates the schemas from the vendored charts
+│   ├── validatePaths.js         Checks every emitted path, for every release
+│   ├── renderFixtures.js        Writes a values.yaml per scenario per release
+│   └── helmTemplateCheck.sh     Renders those fixtures against the real charts
 ├── src/
-│   ├── schema.json              Generated — do not edit manually
-│   ├── chartMeta.json           Generated — which chart release this targets
+│   ├── schemas/8.8.json         Generated — full schema per release, build-time only
+│   ├── schemas/8.9.json
+│   ├── uiSchema.json            Generated — the compact schema the browser loads
+│   ├── chartVersions.js         Which release the output targets
 │   ├── displayConfig.js         Which fields are shown, when, and their constraints
 │   ├── transform.js             Converts form answers to Helm values
 │   ├── sizing.js                Throughput target → cluster topology
 │   ├── importValues.js          Reads an existing values.yaml back into the form
+│   ├── yaml.js                  YAML read/write, and the dump options
 │   ├── App.jsx                  React UI
 │   └── styles/
 ├── test/
@@ -141,25 +147,29 @@ you can carry it across by hand.
 │   ├── golden/                  Expected YAML output, reviewed in pull requests
 │   └── *.test.js
 ├── index.html
-├── package.json                 camundaChart declares the pinned chart version
+├── package.json                 camundaCharts declares the supported releases
 └── README.md
 ```
 
-## Updating for a New Chart Version
+## Supporting a New Chart Version
 
 ```bash
-helm show values camunda/camunda-platform --version <new> > public/values.yaml
-# update camundaChart.version and appVersion in package.json
+mkdir -p public/charts/8.10
+helm show values camunda/camunda-platform --version <new> > public/charts/8.10/values.yaml
+# add an entry to camundaCharts in package.json — first entry is the UI default
 npm run parse && npm run validate && npm test -- -u && npm run verify:helm
 ```
 
-`npm run validate` reports paths the new chart renamed or removed;
-`npm run verify:helm` catches newly required values and new cross-component
-constraints. Neither step is optional — the 14.8.5 upgrade removed
+`npm run parse` reports any field path the new release does not have, and records
+per-release availability in `src/uiSchema.json` so the form hides fields that do
+not apply. `npm run validate` checks every release, and `npm run verify:helm`
+renders every scenario against every chart.
+
+None of those steps is optional — the 14.8.5 upgrade removed
 `webModeler.webapp.env` and revealed that `webModeler.restapi.mail.fromAddress`
 is mandatory, and nothing else would have caught either.
 
-Full procedure in [docs/architecture.md](docs/architecture.md#upgrading-to-a-new-chart-version).
+Full procedure in [docs/architecture.md](docs/architecture.md#supporting-a-new-chart-version).
 
 ## Extending the Tool
 

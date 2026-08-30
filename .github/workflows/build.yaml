@@ -21,13 +21,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # schema.json is committed, so a stale one would silently pass every other
-      # check. Regenerate it and fail if it differs from what was committed.
-      - name: Schema is in sync with public/values.yaml
+      # The generated schemas are committed, so a stale one would silently pass
+      # every other check. Regenerate and fail if anything differs.
+      - name: Schemas are in sync with the vendored charts
         run: |
           npm run parse
-          git diff --exit-code --stat src/schema.json src/chartMeta.json \
-            || { echo "::error::schema.json is stale - run 'npm run parse' and commit the result"; exit 1; }
+          git diff --exit-code --stat src/schemas src/uiSchema.json \
+            || { echo "::error::generated schemas are stale - run 'npm run parse' and commit the result"; exit 1; }
 
       - name: Validate Helm paths against the chart schema
         run: npm run validate
@@ -55,5 +55,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Render generated values against the Camunda chart
+      # Renders every scenario against every supported Camunda release.
+      - name: Render generated values against every supported chart
         run: npm run verify:helm
