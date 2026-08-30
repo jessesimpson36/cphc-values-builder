@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within, waitFor } from '@testing-library/react'
 import App from '../src/App.jsx'
 import { SUPPORTED_VERSIONS } from '../src/chartVersions.js'
 
@@ -59,6 +59,55 @@ describe('initial render', () => {
     render(<App />)
     fireEvent.click(screen.getByText('Generate values.yaml'))
     expect(screen.getByText(/Please select at least one product/)).toBeDefined()
+  })
+})
+
+describe('comparing releases', () => {
+  it('is collapsed by default, behind a button', () => {
+    render(<App />)
+    expect(screen.getByText('Compare releases')).toBeDefined()
+    expect(screen.queryByText('Compare a values.yaml across releases')).toBeNull()
+  })
+
+  it('reports removed paths for a file with a stale key', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('Compare releases'))
+
+    // Defaults to comparing against the release NOT currently selected (8.8,
+    // since the form defaults to 8.9); switch explicitly to 8.9, since
+    // global.license.key only goes stale moving TOWARD 8.9.
+    fireEvent.click(screen.getByRole('button', { name: 'Camunda 8.9' }))
+
+    const file = new File(
+      ['global:\n  license:\n    key: my-license-key\n'],
+      'old-values.yaml',
+      { type: 'application/x-yaml' },
+    )
+    const input = screen.getByText('Choose values.yaml').parentElement.querySelector('input[type="file"]')
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await waitFor(() => expect(document.querySelector('.import-title')).not.toBeNull())
+    expect(document.querySelector('.import-title').textContent).toMatch(/1 path\(s\) no longer exist/)
+    expect(screen.getByText(/global\.license\.key/)).toBeDefined()
+  })
+
+  it('reports no losses for a file with nothing stale', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('Compare releases'))
+
+    const file = new File(['orchestration:\n  enabled: true\n'], 'values.yaml', { type: 'application/x-yaml' })
+    const input = screen.getByText('Choose values.yaml').parentElement.querySelector('input[type="file"]')
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await waitFor(() => expect(document.querySelector('.import-title')).not.toBeNull())
+    expect(document.querySelector('.import-title').textContent).toMatch(/No paths lost/)
+  })
+
+  it('does not touch the form — comparing is read-only', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('Compare releases'))
+    expect(screen.queryByText(/Select Products/)).toBeDefined()
+    expect(screen.getAllByText('Orchestration Cluster')).toHaveLength(1)
   })
 })
 
