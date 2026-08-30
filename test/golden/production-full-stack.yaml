@@ -86,6 +86,8 @@ global:
       enabled: true
   opensearch:
     enabled: false
+  gateway:
+    enabled: false
   documentStore:
     type:
       inmemory:

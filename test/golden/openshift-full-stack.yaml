@@ -86,6 +86,8 @@ global:
     enabled: false
   ingress:
     enabled: false
+  gateway:
+    enabled: false
 identityKeycloak:
   global:
     compatibility:

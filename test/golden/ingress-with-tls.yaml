@@ -38,6 +38,8 @@ global:
       enabled: true
   opensearch:
     enabled: false
+  gateway:
+    enabled: false
   ingress:
     enabled: true
     className: nginx
