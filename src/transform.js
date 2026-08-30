@@ -117,9 +117,19 @@ function applyProductFlags(helmValues, answers) {
   // issuer URL from a Keycloak that was never deployed and every non-Identity
   // deployment fails at template time with an unrelated-looking error deep in
   // a naming helper. Both must be forced off explicitly.
+  //
+  // Unless the user asked for authentication against an EXTERNAL Identity, in
+  // which case auth genuinely is wanted with identity.enabled false, and the
+  // Identity Authentication section writes the flag itself. Forcing it off
+  // here would be overwritten by mapFieldsToHelm anyway — this is explicit
+  // rather than relying on which step happens to run last.
+  const authWantedWithoutIdentity = answers.identity_auth_enabled === true && !!answers.external_identity_url
+
   if (isPre88(answers) && !selected.includes("identity")) {
     helmValues = setNestedValue(helmValues, "identityKeycloak.enabled", false)
-    helmValues = setNestedValue(helmValues, "global.identity.auth.enabled", false)
+    if (!authWantedWithoutIdentity) {
+      helmValues = setNestedValue(helmValues, "global.identity.auth.enabled", false)
+    }
   }
 
   // ── Web Modeler ────────────────────────────────────────────────────────────

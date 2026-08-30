@@ -71,7 +71,13 @@ function secretPath(leaf, defaultPath, overrides) {
 // silently write nothing.
 function secretFields(idPrefix, base, label, { required = false, overrides = {} } = {}) {
   const modeId = `${idPrefix}_secret_mode`
-  const mode = (answers) => answers[modeId] || INLINE
+
+  // Defaults to inline, except where the selected release offers no inline
+  // option at all (8.7's Identity and Optimize OIDC clients accept only an
+  // existing-secret reference). Defaulting to inline there would render the
+  // mode toggle above two hidden fields and nothing else.
+  const mode = (answers) =>
+    answers[modeId] || (resolveFieldPath(inlineField, answers.chartVersion) === null ? EXISTING : INLINE)
 
   const inlineField = {
     id: idPrefix,
@@ -383,6 +389,139 @@ export const displayConfig = {
           },
         }),
         { id: 'identity_db_name',     path: 'identity.externalDatabase.database',            label: 'Database Name', type: 'text',     required: true  },
+      ]
+    },
+
+    // ── External Management Identity ───────────────────────────────────────────
+    // Console and Web Modeler both require Management Identity, but it does not
+    // have to be the one this release deploys. The chart treats
+    // `global.identity.service.url` as satisfying that requirement outright —
+    // `$identityEnabled := (or .Values.identity.enabled .Values.global.identity.service.url)`
+    // in constraints.tpl — which is what the consoleNeedsIdentity and
+    // webModelerNeedsIdentity messages have always told users to do, without
+    // this tool offering anywhere to do it.
+    {
+      id: 'externalIdentity',
+      title: 'External Management Identity',
+      showIf: (answers) =>
+        answers.products.length > 0 && !answers.products.includes('identity'),
+      fields: [
+        {
+          id: 'external_identity_url',
+          path: 'global.identity.service.url',
+          label: 'URL of an existing Management Identity',
+          type: 'text',
+          required: false,
+          placeholder: 'https://identity.example.com',
+        },
+      ]
+    },
+
+    // ── Identity Authentication ────────────────────────────────────────────────
+    // Authentication for Management Identity and the web applications that sit
+    // behind it (Console, Web Modeler, Optimize). Separate from the
+    // Orchestration Cluster's own OIDC section: that one configures Zeebe,
+    // Operate and Tasklist, this one configures everything else, and a
+    // deployment running both needs both. The chart reads them independently.
+    {
+      id: 'identityAuth',
+      title: 'Identity Authentication',
+      showIf: (answers) =>
+        answers.products.includes('identity') || !!answers.external_identity_url,
+      fields: [
+        {
+          id: 'identity_auth_enabled',
+          path: 'global.identity.auth.enabled',
+          label: 'Enable authentication on Management Identity',
+          type: 'checkbox',
+          required: false,
+        },
+      ]
+    },
+
+    // ── Identity OIDC Provider ─────────────────────────────────────────────────
+    {
+      id: 'identityAuthProvider',
+      title: 'Identity OIDC Provider',
+      showIf: (answers) =>
+        (answers.products.includes('identity') || !!answers.external_identity_url) &&
+        answers.identity_auth_enabled === true,
+      fields: [
+        {
+          // The chart validates this against exactly this enum and fails
+          // otherwise, so the option list is the chart's list, not a guess.
+          id: 'identity_auth_type',
+          path: 'global.identity.auth.type',
+          label: 'Provider type',
+          type: 'radio',
+          options: ['KEYCLOAK', 'MICROSOFT', 'GENERIC'],
+          required: true,
+        },
+        { id: 'identity_auth_issuer',            path: 'global.identity.auth.issuer',            label: 'Issuer URL (as seen by browsers)', type: 'text', required: true },
+        { id: 'identity_auth_issuer_backend',    path: 'global.identity.auth.issuerBackendUrl',  label: 'Issuer URL (as seen from inside the cluster)', type: 'text', required: true },
+        { id: 'identity_auth_token_url',         path: 'global.identity.auth.tokenUrl',          label: 'Token URL',    type: 'text', required: false },
+        { id: 'identity_auth_jwks_url',          path: 'global.identity.auth.jwksUrl',           label: 'JWKS URL',     type: 'text', required: false },
+        // authUrl does not exist on 8.7; hidden there automatically.
+        { id: 'identity_auth_auth_url',          path: 'global.identity.auth.authUrl',           label: 'Authorization URL', type: 'text', required: false },
+        { id: 'identity_auth_public_issuer_url', path: 'global.identity.auth.publicIssuerUrl',   label: 'Public issuer URL', type: 'text', required: false },
+      ]
+    },
+
+    // ── Identity OIDC Clients ──────────────────────────────────────────────────
+    // One client registration per web application. Each is gated on its own
+    // product being selected, so a deployment without Optimize never sees
+    // Optimize's client fields.
+    {
+      id: 'identityAuthClients',
+      title: 'Identity OIDC Clients',
+      showIf: (answers) =>
+        (answers.products.includes('identity') || !!answers.external_identity_url) &&
+        answers.identity_auth_enabled === true,
+      fields: [
+        { id: 'oidc_identity_client_id', path: 'global.identity.auth.identity.clientId', label: 'Identity client ID', type: 'text', required: false },
+        { id: 'oidc_identity_audience',  path: 'global.identity.auth.identity.audience', label: 'Identity audience',  type: 'text', required: false },
+        // Rejected outright by the chart when the provider is Keycloak, which
+        // issues this client's credentials itself — see the
+        // identityClientSecretWithKeycloak constraint.
+        ...secretFields('oidc_identity_secret', 'global.identity.auth.identity.secret', 'Identity client secret', {
+          overrides: {
+            '8.7': {
+              inline: null,
+              existingSecret: 'global.identity.auth.identity.existingSecret',
+              existingSecretKey: 'global.identity.auth.identity.existingSecretKey',
+            },
+          },
+        }).map((f) => ({
+          ...f,
+          showIf: (a) => a.identity_auth_type !== 'KEYCLOAK' && (f.showIf ? f.showIf(a) : true),
+        })),
+        { id: 'oidc_identity_claim_name',  path: 'global.identity.auth.identity.initialClaimName',  label: 'Initial claim name',  type: 'text', required: false },
+        { id: 'oidc_identity_claim_value', path: 'global.identity.auth.identity.initialClaimValue', label: 'Initial claim value (first admin)', type: 'text', required: false },
+
+        { id: 'oidc_console_client_id',   path: 'global.identity.auth.console.clientId',    label: 'Console client ID',   type: 'text', required: false, showIf: (a) => a.products.includes('console') },
+        { id: 'oidc_console_audience',    path: 'global.identity.auth.console.audience',    label: 'Console audience',    type: 'text', required: false, showIf: (a) => a.products.includes('console') },
+        { id: 'oidc_console_redirect',    path: 'global.identity.auth.console.redirectUrl', label: 'Console redirect URL', type: 'text', required: false, showIf: (a) => a.products.includes('console') },
+
+        { id: 'oidc_wm_client_id',        path: 'global.identity.auth.webModeler.clientId',          label: 'Web Modeler client ID',           type: 'text', required: false, showIf: (a) => a.products.includes('webModeler') },
+        { id: 'oidc_wm_client_audience',  path: 'global.identity.auth.webModeler.clientApiAudience', label: 'Web Modeler client API audience', type: 'text', required: false, showIf: (a) => a.products.includes('webModeler') },
+        { id: 'oidc_wm_public_audience',  path: 'global.identity.auth.webModeler.publicApiAudience', label: 'Web Modeler public API audience', type: 'text', required: false, showIf: (a) => a.products.includes('webModeler') },
+        { id: 'oidc_wm_redirect',         path: 'global.identity.auth.webModeler.redirectUrl',       label: 'Web Modeler redirect URL',        type: 'text', required: false, showIf: (a) => a.products.includes('webModeler') },
+
+        { id: 'oidc_optimize_client_id',  path: 'global.identity.auth.optimize.clientId',    label: 'Optimize client ID',    type: 'text', required: false, showIf: (a) => a.products.includes('optimize') },
+        { id: 'oidc_optimize_audience',   path: 'global.identity.auth.optimize.audience',    label: 'Optimize audience',     type: 'text', required: false, showIf: (a) => a.products.includes('optimize') },
+        { id: 'oidc_optimize_redirect',   path: 'global.identity.auth.optimize.redirectUrl', label: 'Optimize redirect URL', type: 'text', required: false, showIf: (a) => a.products.includes('optimize') },
+        ...secretFields('oidc_optimize_secret', 'global.identity.auth.optimize.secret', 'Optimize client secret', {
+          overrides: {
+            '8.7': {
+              inline: null,
+              existingSecret: 'global.identity.auth.optimize.existingSecret',
+              existingSecretKey: 'global.identity.auth.optimize.existingSecretKey',
+            },
+          },
+        }).map((f) => ({
+          ...f,
+          showIf: (a) => a.products.includes('optimize') && (f.showIf ? f.showIf(a) : true),
+        })),
       ]
     },
 
@@ -916,16 +1055,36 @@ export const displayConfig = {
         answers.databaseType === 'rdbms' && answers.products.includes('optimize'),
     },
     {
+      // The chart's own rule is
+      // `$identityEnabled := (or .Values.identity.enabled .Values.global.identity.service.url)`,
+      // so an external Identity URL satisfies this as fully as deploying
+      // Identity does — verified by rendering Console with only the URL set.
       id: 'consoleNeedsIdentity',
-      message: 'Console requires Management Identity. Select Identity as well, or point Console at an external Identity instance.',
+      message: 'Console requires Management Identity. Select Identity as well, or set an external Identity URL under External Management Identity.',
       violated: (answers) =>
-        answers.products.includes('console') && !answers.products.includes('identity'),
+        answers.products.includes('console') &&
+        !answers.products.includes('identity') &&
+        !answers.external_identity_url,
     },
     {
       id: 'webModelerNeedsIdentity',
-      message: 'Web Modeler requires Management Identity. Select Identity as well, or point Web Modeler at an external Identity instance.',
+      message: 'Web Modeler requires Management Identity. Select Identity as well, or set an external Identity URL under External Management Identity.',
       violated: (answers) =>
-        answers.products.includes('webModeler') && !answers.products.includes('identity'),
+        answers.products.includes('webModeler') &&
+        !answers.products.includes('identity') &&
+        !answers.external_identity_url,
+    },
+    {
+      // The chart fails outright if this client's secret is set while the
+      // provider is Keycloak, which issues the credential itself. Present on
+      // every supported release (8.7 words it against the flat
+      // `.existingSecret` key, 8.8+ against `.secret`).
+      id: 'identityClientSecretWithKeycloak',
+      message: 'The Identity client secret must not be set when the provider type is KEYCLOAK — Keycloak issues that credential itself. Clear it, or choose MICROSOFT or GENERIC.',
+      violated: (answers) =>
+        answers.identity_auth_enabled === true &&
+        answers.identity_auth_type === 'KEYCLOAK' &&
+        !!(answers.oidc_identity_secret || answers.oidc_identity_secret_existing_secret),
     },
     {
       id: 'multiregionNamespaceCount',

@@ -36,7 +36,8 @@ The tool surfaces only the fields users actually need to configure, handles all 
 - **Multi-region** — generates the full cross-region broker contact point list, which the chart cannot compute itself
 - **Existing Kubernetes secrets** — reference pre-created secrets instead of writing credentials in plaintext
 - **Private CA trust** — mount a CA bundle so pods trust an external database behind a corporate certificate authority
-- **OIDC authentication** — configure an external identity provider
+- **OIDC authentication** — configure an external identity provider for the Orchestration Cluster, and separately for Management Identity and the apps behind it (Console, Web Modeler, Optimize), with per-component client IDs, audiences and secrets
+- **External Management Identity** — point Console and Web Modeler at an Identity instance this release does not deploy
 - **Document stores** — S3 (with IRSA) or GCS instead of the default in-memory store, which loses documents on restart
 - **OpenShift and AWS EKS** — security context adaptation and IRSA set across every sub-chart
 
