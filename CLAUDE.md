@@ -114,6 +114,17 @@ chart-default differences from 8.8+ that are NOT path differences:
 `true` on 8.7 (false on 8.8+) — `transform.js` forces both off when Identity
 is not selected, or every non-Identity deployment fails to install.
 
+### RDBMS secondary storage (8.9 only)
+
+`orchestration.data.secondaryStorage` doesn't exist before 8.9. It's
+Orchestration-Cluster-specific — Optimize has no RDBMS option at all, so
+selecting RDBMS with Optimize also selected is a constraint violation
+(`rdbmsIncompatibleWithOptimize`), not something transform.js reconciles.
+`rdbmsRequires89` blocks it on 8.7/8.8 in the UI; transform.js checks
+`selectedVersion(answers) === "8.9"` again before writing, since constraints
+only gate the UI — a direct `transformAnswers` call (tests, the path
+validator) can still hit an impossible combination.
+
 ### Multi-region
 
 The chart cannot compute initial contact points in multi-region mode (it has no way to

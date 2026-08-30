@@ -211,6 +211,30 @@ flagged distinctly from one the user set by hand — the fix for the former is
 "reconfigure that section after switching release," not "consult the chart
 docs."
 
+## RDBMS secondary storage (8.9 only)
+
+Camunda 8.9 added relational databases (PostgreSQL, MySQL, Oracle, SQL Server,
+Aurora) as a first-class alternative to Elasticsearch/OpenSearch for the
+Orchestration Cluster's own secondary storage. It does not exist on 8.7 or 8.8
+at all — `orchestration.data.secondaryStorage` is absent from both schemas.
+
+**It is Orchestration Cluster-specific, not a whole-deployment database
+choice**: Optimize has no RDBMS option and always needs Elasticsearch or
+OpenSearch for its own analytics store, confirmed against Camunda's own
+architecture docs and by reading `optimize.database`'s schema (elasticsearch
+and opensearch only). Choosing RDBMS for Orchestration while Optimize is also
+selected is rejected by the `rdbmsIncompatibleWithOptimize` constraint rather
+than silently doing something wrong with Optimize's database — the two are
+not options on the same axis.
+
+`databaseType`'s options always include `rdbms`, on every release — a radio
+button cannot conditionally hide one of its own options. The `rdbmsRequires89`
+constraint rejects it instead when the selected release isn't 8.9. `transform.js`
+guards the same rule again before writing anything (`selectedVersion(answers)
+=== "8.9"`), so a caller that bypasses the UI — the cross-version path
+validator among them — cannot produce a file referencing a path the target
+chart doesn't have. That guard is what caught the gap.
+
 ## Multi-region
 
 A dual-region cluster is one logical Zeebe cluster stretched across two
