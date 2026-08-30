@@ -14,7 +14,8 @@
  *   4. cleanObject        — remove empty, null, and undefined values
  */
 
-import { displayConfig, isFieldVisible } from "./displayConfig.js"
+import { displayConfig } from "./displayConfig.js"
+import { fieldApplies } from "./chartVersions.js"
 import { calculateSizing } from "./sizing.js"
 
 // ─── Utility: set a value in a nested object using a dot-notation path ────────
@@ -351,7 +352,7 @@ function mapFieldsToHelm(helmValues, answers) {
 
       // A field hidden inside a visible section is just as hidden as one in a
       // collapsed section — its answer must not reach the output.
-      if (!isFieldVisible(field, answers)) continue
+      if (!fieldApplies(field, answers)) continue
 
       // env_vars type — convert to YAML array of { name, value } objects
       if (field.type === "env_vars") {

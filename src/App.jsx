@@ -24,9 +24,16 @@ import { useState, useEffect, useRef } from "react"
 import {
   displayConfig,
   visibleSections as computeVisibleSections,
-  isFieldVisible,
   violatedConstraints,
 } from "./displayConfig"
+import {
+  SUPPORTED_VERSIONS,
+  DEFAULT_VERSION,
+  getChart,
+  selectedVersion,
+  fieldApplies,
+  describePath,
+} from "./chartVersions"
 import {
   transformAnswers,
   resolveSizing,
@@ -37,17 +44,9 @@ import {
 import { importValues } from "./importValues"
 import { CALIBRATION_PROFILES, DEFAULT_CALIBRATION } from "./sizing"
 import { dumpValues, loadValues } from "./yaml"
-import schema from "./schema.json"
-import chartMeta from "./chartMeta.json"
-
-// ─── Build a path → description lookup from schema.json ───────────────────────
-const schemaDescriptions = Object.fromEntries(
-  schema.map((field) => [field.path, field.description])
-)
-
 // ─── Tooltip icon ──────────────────────────────────────────────────────────────
 function Tooltip({ path }) {
-  const description = path ? schemaDescriptions[path] : null
+  const description = path ? describePath(path) : null
   const [pos, setPos] = useState(null)
   const iconRef = useRef(null)
 
@@ -280,7 +279,7 @@ function Section({ section, answers, onFieldChange }) {
       </div>
       <div className="card-body">
         {section.fields
-          .filter((field) => isFieldVisible(field, answers))
+          .filter((field) => fieldApplies(field, answers))
           .map((field) => (
             <Field
               key={field.id}
@@ -383,6 +382,29 @@ function MultiregionPreview({ answers }) {
   )
 }
 
+// ─── Chart Version Selector ────────────────────────────────────────────────────
+//
+// Camunda supports several minor versions at once and their charts differ, so
+// the target release is a choice the user makes rather than a property of the
+// build. Everything downstream — which fields render, which are required, and
+// which paths get written — follows from it.
+
+function VersionSelector({ current, onChange }) {
+  return (
+    <div className="theme-selector" title="Camunda release this file targets">
+      {SUPPORTED_VERSIONS.map((chart) => (
+        <button
+          key={chart.key}
+          className={`theme-btn ${current === chart.key ? "active" : ""}`}
+          onClick={() => onChange(chart.key)}
+        >
+          {chart.appVersion}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ─── Theme Selector ────────────────────────────────────────────────────────────
 const THEMES = [
   { id: "dark",    label: "Dark",    icon: "◑" },
@@ -434,7 +456,7 @@ function storeTheme(theme) {
 
 // ─── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [answers, setAnswers] = useState({ products: [] })
+  const [answers, setAnswers] = useState({ products: [], chartVersion: DEFAULT_VERSION })
   const [yamlOutput, setYamlOutput] = useState("")
   const [copied, setCopied] = useState(false)
   const [errors, setErrors] = useState([])
@@ -462,6 +484,7 @@ export default function App() {
   }
 
   const visibleSections = computeVisibleSections(answers)
+  const chart = getChart(selectedVersion(answers))
 
   const validate = () => {
     const errs = []
@@ -469,7 +492,7 @@ export default function App() {
     for (const section of visibleSections) {
       for (const field of section.fields) {
         // A field the user cannot see cannot be required of them.
-        if (!isFieldVisible(field, answers)) continue
+        if (!fieldApplies(field, answers)) continue
 
         if (field.type === "env_vars") {
           const rows = answers[field.id] || []
@@ -532,8 +555,16 @@ export default function App() {
     URL.revokeObjectURL(url)
   }
 
+  // Switching release re-evaluates every showIf and drops fields the new chart
+  // does not have, so any output generated for the previous one is discarded.
+  const handleVersionChange = (versionKey) => {
+    setAnswers((prev) => ({ ...prev, chartVersion: versionKey }))
+    setYamlOutput("")
+    setErrors([])
+  }
+
   const handleReset = () => {
-    setAnswers({ products: [] })
+    setAnswers({ products: [], chartVersion: selectedVersion(answers) })
     setYamlOutput("")
     setErrors([])
     setImportReport(null)
@@ -552,7 +583,9 @@ export default function App() {
       const parsed = loadValues(await file.text())
       const { answers: imported, unmapped, warnings } = importValues(parsed)
 
-      setAnswers(imported)
+      // A values.yaml carries no marker of the release it was written for, so
+      // the current selection is kept rather than silently reset to the newest.
+      setAnswers({ ...imported, chartVersion: selectedVersion(answers) })
       setYamlOutput("")
       setErrors([])
       setImportReport({ fileName: file.name, unmapped, warnings })
@@ -576,6 +609,7 @@ export default function App() {
           <span className="header-title">Camunda Helm Values Generator</span>
         </div>
         <div className="header-right">
+          <VersionSelector current={selectedVersion(answers)} onChange={handleVersionChange} />
           <ThemeSelector current={theme} onChange={setTheme} />
           <input
             type="file"
@@ -705,9 +739,9 @@ export default function App() {
         )}
 
         <footer className="app-footer">
-          Generated for {chartMeta.chart} chart {chartMeta.version} (Camunda {chartMeta.appVersion}).
+          Generated for {chart.chart} chart {chart.version} (Camunda {chart.appVersion}).
           {" "}Install with{" "}
-          <code>helm install camunda camunda/camunda-platform --version {chartMeta.version} -f values.yaml</code>
+          <code>helm install camunda camunda/{chart.chart} --version {chart.version} -f values.yaml</code>
         </footer>
 
       </main>

@@ -37,7 +37,7 @@
   // would desynchronise it from the chart that src/schema.json was generated
   // from, and from the version helm actually installs. Chart upgrades are a
   // deliberate step - see docs/architecture.md - so the file is off limits.
-  "ignorePaths": ["public/values.yaml"],
+  "ignorePaths": ["public/charts/**"],
 
   // The previous regexManagers tracked image tags in the Kubernetes manifests
   // (cphc-values-builder.yaml, ingress.yaml, cphc-service.yaml). Those manifests

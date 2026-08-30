@@ -1,51 +1,55 @@
 /**
  * parseValues.js - YAML Schema Extractor
  *
- * Reads the official Camunda Helm chart values.yaml, extracts every
- * configurable field and its ## @param description, then writes a flat
- * schema.json that the React UI consumes at runtime.
+ * Reads every Camunda Helm chart release this tool supports, extracts each
+ * configurable field and its ## @param description, and writes the two things
+ * the rest of the project consumes.
  *
  * Run with:  npm run parse
  *
- * Input:   public/values.yaml, package.json (camundaChart)
- * Output:  src/schema.json, src/chartMeta.json
+ * Input:   public/charts/<key>/values.yaml, package.json (camundaCharts)
+ *
+ * Output:  src/schemas/<key>.json   full schema per chart, ~1000 entries.
+ *                                   Build-time only - used by npm run validate.
+ *
+ *          src/uiSchema.json        compact, and the only one the browser loads.
+ *                                   Holds the supported versions plus, for each
+ *                                   path the form can actually write, its
+ *                                   description and which versions have it.
+ *
+ * The split matters: a full schema is ~200KB, so importing one per version
+ * would grow the bundle every time a Camunda release is added. The UI only
+ * needs descriptions for the ~100 paths it displays, which stays flat.
  *
  * Data flow:
  *
  *   values.yaml (raw text + YAML structure)
  *        |
- *        ├── js-yaml parses structure 
- *        └── comment parser           
+ *        ├── js-yaml parses structure
+ *        └── comment parser
  *             |
  *             └── combined + typed
  *                  |
- *                  └── schema.json  ← consumed by the React UI
+ *                  ├── schemas/<key>.json  ← npm run validate
+ *                  └── uiSchema.json       ← the React UI
  */
-
 
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { loadValues } from '../src/yaml.js'
+import { displayConfig } from '../src/displayConfig.js'
 
-// Resolve __dirname in ESM (not available natively unlike CommonJS)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// ─── Read source file ─────────────────────────────────────────────────────────
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'))
+const charts = pkg.camundaCharts
 
-const rawYaml = fs.readFileSync(
-  path.join(__dirname, '../public/values.yaml'),
-  'utf8'
-)
-
-process.stdout.write(`[parse] Read values.yaml - ${rawYaml.length.toLocaleString()} characters\n`)
-
-// Parse the YAML into a JavaScript object so we can traverse its structure
-const parsedYaml = loadValues(rawYaml)
-
-process.stdout.write(`[parse] YAML parsed - top-level keys: ${Object.keys(parsedYaml).join(', ')}\n`)
-
+if (!Array.isArray(charts) || charts.length === 0) {
+  console.error('[parse] package.json is missing "camundaCharts" - cannot record chart provenance.')
+  process.exit(1)
+}
 
 // ─── Object Flattening ────────────────────────────────────────────────────────
 //
@@ -53,145 +57,134 @@ process.stdout.write(`[parse] YAML parsed - top-level keys: ${Object.keys(parsed
 // dot-notation paths so every field can be referenced by a single string
 // e.g. { global: { elasticsearch: { auth: { username: "" } } } }
 // becomes  "global.elasticsearch.auth.username"
-//
-// This makes it trivial to look up any field, map user inputs to YAML paths,
-// and reconstruct the correct nested structure in the output.
 
 function flattenObject(obj, parentPath = '') {
   const result = []
 
   for (const key of Object.keys(obj)) {
-    // Build the full path for this key
     const currentPath = parentPath ? `${parentPath}.${key}` : key
     const value = obj[key]
 
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      // If the value is an object, go deeper
-      const nested = flattenObject(value, currentPath)
-      result.push(...nested)
+      result.push(...flattenObject(value, currentPath))
     } else {
-      // If the value is a primitive (string, number, boolean) or array, save it
-      result.push({
-        path: currentPath,
-        default: value
-      })
+      result.push({ path: currentPath, default: value })
     }
   }
 
   return result
 }
-
-const flatFields = flattenObject(parsedYaml)
-
-process.stdout.write(`[parse] Flattened - ${flatFields.length} fields extracted\n`)
-
 
 // ─── Comment Parser ───────────────────────────────────────────────────────────
 //
-// The values.yaml file documents each field with a structured comment directly
-// above it, following the Bitnami convention:
+// values.yaml documents each field with a structured comment above it,
+// following the Bitnami convention:
 //
 //   ## @param global.elasticsearch.auth.username the username for external elasticsearch
 //
-// We parse these from the raw text (not the parsed YAML, since comments are
-// stripped during YAML parsing) and build a path → description map.
-// The path in the comment is used as the key so we can join it with the
-// flattened fields in the next step.
+// These are parsed from the raw text, since YAML parsing discards comments.
 
 function parseComments(rawText) {
   const result = {}
-  const lines = rawText.split('\n')
 
-  for (const line of lines) {
-    if (line.includes('## @param')) {
-      // Strip the ## @param prefix, leaving "<path> <description>"
-      const content = line.replace(/.*##\s*@param\s+/, '').trim()
+  for (const line of rawText.split('\n')) {
+    if (!line.includes('## @param')) continue
 
-      // First word is the path, everything after is the description
-      // (descriptions can contain spaces, URLs, punctuation)
-      const spaceIndex = content.indexOf(' ')
+    const content = line.replace(/.*##\s*@param\s+/, '').trim()
+    const spaceIndex = content.indexOf(' ')
+    if (spaceIndex === -1) continue
 
-      if (spaceIndex !== -1) {
-        const path = content.substring(0, spaceIndex)
-        const description = content.substring(spaceIndex + 1).trim()
-        result[path] = description
-      }
-    }
+    result[content.substring(0, spaceIndex)] = content.substring(spaceIndex + 1).trim()
   }
 
   return result
 }
 
-const comments = parseComments(rawYaml)
+// ─── Build one schema per chart ───────────────────────────────────────────────
 
-process.stdout.write(`[parse] Comments parsed - ${Object.keys(comments).length} @param descriptions found\n`)
+const schemasDir = path.join(__dirname, '../src/schemas')
+fs.mkdirSync(schemasDir, { recursive: true })
 
+const schemasByKey = {}
 
-// ─── Combine Fields and Comments ──────────────────────────────────────────────
-//
-// Both lists use the dot-notation path as a common key, so combining them is
-// a straightforward map. Fields without a matching comment get an empty string.
-// We also infer a type from the default value so the UI can render the
-// appropriate input (e.g. checkboxes for booleans, text inputs for strings).
+for (const chart of charts) {
+  const valuesPath = path.join(__dirname, `../public/charts/${chart.key}/values.yaml`)
 
-function combineFieldsAndComments(flatFields, comments) {
-  return flatFields.map(field => {
-    return {
-      path: field.path,
-      default: field.default,
-      type: Array.isArray(field.default)
-        ? 'array'
-        : typeof field.default,
-      description: comments[field.path] || ''
-    }
-  })
+  if (!fs.existsSync(valuesPath)) {
+    console.error(`[parse] missing ${path.relative(process.cwd(), valuesPath)} for chart ${chart.key}.`)
+    process.exit(1)
+  }
+
+  const rawYaml = fs.readFileSync(valuesPath, 'utf8')
+  const comments = parseComments(rawYaml)
+
+  const schema = flattenObject(loadValues(rawYaml)).map((field) => ({
+    path: field.path,
+    default: field.default,
+    type: Array.isArray(field.default) ? 'array' : typeof field.default,
+    description: comments[field.path] || '',
+  }))
+
+  schemasByKey[chart.key] = schema
+
+  const outputPath = path.join(schemasDir, `${chart.key}.json`)
+  fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2) + '\n')
+
+  process.stdout.write(
+    `[parse] ${chart.key}: chart ${chart.version} (Camunda ${chart.appVersion}) - ` +
+    `${schema.length} fields, ${Object.keys(comments).length} descriptions\n`,
+  )
 }
 
-const schema = combineFieldsAndComments(flatFields, comments)
-
-process.stdout.write(`[parse] Schema built - ${schema.length} entries total\n`)
-
-
-// ─── Write Output ─────────────────────────────────────────────────────────────
+// ─── Build the compact UI schema ──────────────────────────────────────────────
 //
-// schema.json is the single file the React UI imports. It is always generated
-// by this script - never edited manually. Commit it alongside values.yaml
-// so the deployed app stays in sync with the chart version.
+// Only the paths displayConfig can write. For each, the description (taken from
+// the newest chart that documents it) and the versions that contain it, so the
+// UI can hide a field that does not apply to the selected version.
 
-const outputPath = path.join(__dirname, '../src/schema.json')
+const displayedPaths = [
+  ...new Set(
+    displayConfig.sections.flatMap((section) =>
+      section.fields.filter((field) => field.path).map((field) => field.path),
+    ),
+  ),
+].sort()
 
-fs.writeFileSync(
-  outputPath,
-  JSON.stringify(schema, null, 2)
-)
+const fields = {}
 
-process.stdout.write(`[parse] Done - schema.json written to src/schema.json (${fs.statSync(outputPath).size.toLocaleString()} bytes)\n`)
+for (const fieldPath of displayedPaths) {
+  const versions = []
+  let description = ''
 
+  for (const chart of charts) {
+    const entry = schemasByKey[chart.key].find((f) => f.path === fieldPath)
+    if (!entry) continue
+    versions.push(chart.key)
+    if (!description && entry.description) description = entry.description
+  }
 
-// ─── Write Chart Metadata ─────────────────────────────────────────────────────
-//
-// public/values.yaml is a vendored copy of one specific published chart release.
-// Nothing inside the file records which one, so the version is declared in
-// package.json under "camundaChart" and mirrored here for the UI to display.
-// Users cannot judge whether generated output applies to their cluster without
-// knowing the chart version it was built from.
-//
-// When bumping the chart, update package.json first — see docs/architecture.md.
-
-const pkg = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
-)
-
-if (!pkg.camundaChart?.version) {
-  console.error('[parse] package.json is missing "camundaChart.version" - cannot record chart provenance.')
-  process.exit(1)
+  fields[fieldPath] = { description, versions }
 }
 
-const chartMetaPath = path.join(__dirname, '../src/chartMeta.json')
+const uiSchema = {
+  defaultVersion: charts[0].key,
+  versions: charts,
+  fields,
+}
 
-fs.writeFileSync(
-  chartMetaPath,
-  JSON.stringify(pkg.camundaChart, null, 2) + '\n'
+const uiSchemaPath = path.join(__dirname, '../src/uiSchema.json')
+fs.writeFileSync(uiSchemaPath, JSON.stringify(uiSchema, null, 2) + '\n')
+
+const notEverywhere = displayedPaths.filter((p) => fields[p].versions.length !== charts.length)
+
+process.stdout.write(
+  `[parse] uiSchema.json - ${displayedPaths.length} displayed paths across ` +
+  `${charts.length} versions (${fs.statSync(uiSchemaPath).size.toLocaleString()} bytes)\n`,
 )
 
-process.stdout.write(`[parse] Done - chartMeta.json written (chart ${pkg.camundaChart.chart} ${pkg.camundaChart.version}, Camunda ${pkg.camundaChart.appVersion})\n`)
+if (notEverywhere.length > 0) {
+  process.stdout.write(`[parse] ${notEverywhere.length} path(s) are not in every supported version:\n`)
+  for (const p of notEverywhere) {
+    process.stdout.write(`           ${p} -> only ${fields[p].versions.join(', ')}\n`)
+  }
+}

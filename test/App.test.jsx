@@ -12,6 +12,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import App from '../src/App.jsx'
+import { SUPPORTED_VERSIONS } from '../src/chartVersions.js'
 
 afterEach(cleanup)
 
@@ -47,10 +48,66 @@ describe('initial render', () => {
     expect(screen.getByText(/camunda-platform chart 14\.8\.5/)).toBeDefined()
   })
 
+  it('offers every supported Camunda release', () => {
+    render(<App />)
+    for (const chart of SUPPORTED_VERSIONS) {
+      expect(screen.getByRole('button', { name: chart.appVersion }), chart.key).toBeDefined()
+    }
+  })
+
   it('refuses to generate with nothing selected', () => {
     render(<App />)
     fireEvent.click(screen.getByText('Generate values.yaml'))
     expect(screen.getByText(/Please select at least one product/)).toBeDefined()
+  })
+})
+
+describe('choosing a Camunda release', () => {
+  it('updates the install command to the chart for that release', () => {
+    render(<App />)
+    const older = SUPPORTED_VERSIONS[SUPPORTED_VERSIONS.length - 1]
+
+    fireEvent.click(screen.getByRole('button', { name: older.appVersion }))
+    expect(screen.getByText(new RegExp(`chart ${older.version.replace(/\./g, '\\.')}`))).toBeDefined()
+  })
+
+  it('discards output generated for the previous release', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    clickOption('elasticsearch')
+
+    const card = screen.getByText('Elasticsearch Configuration').closest('.card')
+    for (const [placeholder, value] of [['Username', 'u'], ['Password', 'p'], ['Host', 'h'], ['Port', '9200']]) {
+      fireEvent.change(within(card).getByPlaceholderText(placeholder), { target: { value } })
+    }
+    clickOption('https')
+    fireEvent.click(screen.getByText('Generate values.yaml'))
+    expect(screen.getByText('Generated values.yaml')).toBeDefined()
+
+    const older = SUPPORTED_VERSIONS[SUPPORTED_VERSIONS.length - 1]
+    fireEvent.click(screen.getByRole('button', { name: older.appVersion }))
+
+    // Stale YAML for the old release must not linger under the new heading.
+    expect(screen.queryByText('Generated values.yaml')).toBeNull()
+  })
+})
+
+describe('importing a values.yaml', () => {
+  it('keeps the selected release, since a values.yaml does not record one', async () => {
+    render(<App />)
+    const older = SUPPORTED_VERSIONS[SUPPORTED_VERSIONS.length - 1]
+    fireEvent.click(screen.getByRole('button', { name: older.appVersion }))
+
+    const file = new File(
+      ['orchestration:\n  enabled: true\n'],
+      'values.yaml',
+      { type: 'application/x-yaml' },
+    )
+    const input = document.querySelector('input[type="file"]')
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await screen.findByText(/Loaded values.yaml/)
+    expect(screen.getByText(new RegExp(`chart ${older.version.replace(/\./g, '\\.')}`))).toBeDefined()
   })
 })
 

@@ -1,6 +1,0 @@
-{
-  "chart": "camunda-platform",
-  "version": "14.8.5",
-  "appVersion": "8.9",
-  "repository": "https://helm.camunda.io"
-}
