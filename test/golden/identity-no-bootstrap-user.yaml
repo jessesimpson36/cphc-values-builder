@@ -13,13 +13,7 @@ identity:
       inlineSecret: identity-secret
     database: identity
   firstUser:
-    enabled: true
-    username: admin
-    email: admin@example.com
-    firstName: Cluster
-    lastName: Admin
-    secret:
-      inlineSecret: first-user-secret
+    enabled: false
 identityPostgresql:
   enabled: false
 webModeler:
@@ -27,12 +21,9 @@ webModeler:
 webModelerPostgresql:
   enabled: false
 connectors:
-  enabled: true
-  env:
-    - name: CAMUNDA_CONNECTOR_POLLING_ENABLED
-      value: 'true'
+  enabled: false
 console:
-  enabled: true
+  enabled: false
 global:
   elasticsearch:
     enabled: false

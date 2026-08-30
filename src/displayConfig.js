@@ -37,6 +37,13 @@ const INLINE = 'Inline value'
 const EXISTING = 'Existing secret'
 const SECRET_MODES = [INLINE, EXISTING]
 
+// The Identity bootstrap user is opt-in or opt-out by explicit choice; see the
+// Identity Bootstrap User section for why there is no default.
+const FIRST_USER_CREATE = 'Create an administrator'
+const FIRST_USER_NONE = 'No initial user'
+
+const firstUserWanted = (answers) => answers.first_user_mode === FIRST_USER_CREATE
+
 // Builds the three fields that make up one credential input: the mode toggle,
 // the inline value, and the existing-secret reference. `base` is the path of
 // the secret object in the chart, e.g. 'global.elasticsearch.auth.secret'.
@@ -248,6 +255,40 @@ export const displayConfig = {
       ]
     },
 
+    // ── TLS trust ──────────────────────────────────────────────────────────────
+    //
+    // An external Elasticsearch or OpenSearch fronted by a private or corporate
+    // CA is not trusted by the pods' default trust store, and the connection
+    // fails at runtime with a certificate error that says nothing about the
+    // cause. The chart mounts this PEM bundle and converts it to a PKCS12
+    // truststore at pod start.
+    //
+    // This replaces the per-component JKS truststore options, which the chart
+    // now emits a deprecation warning for.
+    {
+      id: 'tlsTrust',
+      title: 'TLS Trust (private CA)',
+      showIf: (answers) => answers.es_tls === true || answers.os_tls === true,
+      fields: [
+        {
+          id: 'ca_bundle_secret',
+          path: 'global.tls.caBundle.secret.existingSecret',
+          label: 'Secret holding the CA certificate bundle',
+          type: 'text',
+          required: false,
+          placeholder: 'camunda-ca-bundle',
+        },
+        {
+          id: 'ca_bundle_secret_key',
+          path: 'global.tls.caBundle.secret.existingSecretKey',
+          label: 'Key within the secret',
+          type: 'text',
+          required: false,
+          placeholder: 'ca.crt',
+        },
+      ]
+    },
+
     // ── Management Identity Database ───────────────────────────────────────────
     {
       id: 'identityDatabase',
@@ -259,6 +300,38 @@ export const displayConfig = {
         { id: 'identity_db_username', path: 'identity.externalDatabase.username',            label: 'Username',      type: 'text',     required: true  },
         ...secretFields('identity_db_password', 'identity.externalDatabase.secret', 'Password', { required: true }),
         { id: 'identity_db_name',     path: 'identity.externalDatabase.database',            label: 'Database Name', type: 'text',     required: true  },
+      ]
+    },
+
+    // ── Identity bootstrap user ────────────────────────────────────────────────
+    //
+    // identity.firstUser is enabled by default in the chart, with username
+    // "demo" and email "demo@example.org" and NO password — the chart's own
+    // NOTES.txt says so on every install. Leaving this to the defaults means
+    // shipping a user called demo to production, so the choice is made explicit
+    // rather than offered as a checkbox that defaults to the chart's behaviour.
+    {
+      id: 'identityFirstUser',
+      title: 'Identity Bootstrap User',
+      showIf: (answers) => answers.products.includes('identity'),
+      fields: [
+        {
+          id: 'first_user_mode',
+          path: null,
+          label: 'Create an initial administrator?',
+          type: 'radio',
+          options: [FIRST_USER_CREATE, FIRST_USER_NONE],
+          required: true,
+        },
+        { id: 'first_user_username',   path: 'identity.firstUser.username',   label: 'Username',   type: 'text', required: true,  showIf: firstUserWanted },
+        { id: 'first_user_email',      path: 'identity.firstUser.email',      label: 'Email',      type: 'text', required: true,  showIf: firstUserWanted },
+        { id: 'first_user_first_name', path: 'identity.firstUser.firstName',  label: 'First name', type: 'text', required: false, showIf: firstUserWanted },
+        { id: 'first_user_last_name',  path: 'identity.firstUser.lastName',   label: 'Last name',  type: 'text', required: false, showIf: firstUserWanted },
+        ...secretFields('first_user_password', 'identity.firstUser.secret', 'Password', { required: true })
+          .map((field) => ({
+            ...field,
+            showIf: (answers) => firstUserWanted(answers) && (field.showIf ? field.showIf(answers) : true),
+          })),
       ]
     },
 
@@ -720,6 +793,8 @@ export const displayConfig = {
 // The UI, the validator and transform.js must agree exactly on what is visible:
 // a field the user cannot see must not be required, and must not be written to
 // the output. Sharing these two functions is what keeps them in step.
+
+export { FIRST_USER_CREATE, FIRST_USER_NONE }
 
 export function visibleSections(answers) {
   return displayConfig.sections.filter((section) => section.showIf(answers))
