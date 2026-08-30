@@ -55,7 +55,11 @@ jobs:
 
       - run: npm ci
 
-      # Builds the container image but deliberately never pushes it. No image is
+      # Renders every scenario against every supported Camunda release.
+      - name: Render generated values against every supported chart
+        run: npm run verify:helm
+
+  # Builds the container image but deliberately never pushes it. No image is
   # published anywhere (issue #28) - this only proves the Dockerfile still
   # builds, so a dependency or build-script change cannot quietly break
   # self-hosting for the people who build it themselves.
@@ -76,7 +80,3 @@ jobs:
           done
           curl -sf http://localhost:8080/ | grep -q 'Camunda Helm Values Generator'
           docker rm -f cphc
-
-  # Renders every scenario against every supported Camunda release.
-      - name: Render generated values against every supported chart
-        run: npm run verify:helm
