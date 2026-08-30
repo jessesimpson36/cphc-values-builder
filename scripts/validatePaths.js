@@ -34,23 +34,11 @@ import { fileURLToPath } from 'url'
 import { displayConfig } from '../src/displayConfig.js'
 import { transformAnswers } from '../src/transform.js'
 import { SUPPORTED_VERSIONS, isPathAvailable } from '../src/chartVersions.js'
+import { flattenLeafPaths } from '../src/objectPaths.js'
 import { scenarios } from '../test/scenarios.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-function leafPaths(obj, parentPath = '') {
-  const result = []
-  for (const [key, value] of Object.entries(obj)) {
-    const currentPath = parentPath ? `${parentPath}.${key}` : key
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result.push(...leafPaths(value, currentPath))
-    } else {
-      result.push(currentPath)
-    }
-  }
-  return result
-}
 
 let failed = 0
 
@@ -77,7 +65,7 @@ for (const chart of SUPPORTED_VERSIONS) {
   // Source 2: what transform.js actually emits when targeting this release.
   for (const scenario of scenarios) {
     const answers = { ...scenario.answers, chartVersion: chart.key }
-    for (const emitted of leafPaths(transformAnswers(answers))) {
+    for (const emitted of flattenLeafPaths(transformAnswers(answers))) {
       if (!checked.has(emitted)) {
         checked.set(emitted, `transform output of scenario "${scenario.name}"`)
       }
