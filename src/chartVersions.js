@@ -18,6 +18,9 @@
 
 import uiSchema from './uiSchema.json' with { type: 'json' }
 import { isFieldVisible } from './displayConfig.js'
+import { resolveFieldPath } from './fieldPaths.js'
+
+export { resolveFieldPath }
 
 export const SUPPORTED_VERSIONS = uiSchema.versions
 export const DEFAULT_VERSION = uiSchema.defaultVersion
@@ -52,13 +55,30 @@ export function isPathAvailable(fieldPath, versionKey) {
  * The single question the UI, validation and transform all need to ask:
  * should this field be rendered, required, and written?
  *
- * A field is out if its section is hidden, its own showIf is false, or the
- * selected chart release does not have its path.
+ * A field is out if its section is hidden, its own showIf is false, the
+ * selected release's path for it (see fieldPaths.js) does not exist in that
+ * chart's schema, or the field explicitly has no path at all on this release.
  */
 export function fieldApplies(field, answers) {
   if (!isFieldVisible(field, answers)) return false
-  if (!field.path) return true
-  return isPathAvailable(field.path, selectedVersion(answers))
+
+  const version = selectedVersion(answers)
+  const path = resolveFieldPath(field, version)
+
+  if (path === null) {
+    // A field with no path at all (UI-only, e.g. a mode-toggle radio) always
+    // applies once visible. A field whose `paths` override is explicitly null
+    // for THIS version means the release has no equivalent at all.
+    const hasVersionOverride = field.paths && Object.prototype.hasOwnProperty.call(field.paths, version)
+    return !hasVersionOverride
+  }
+
+  return isPathAvailable(path, version)
+}
+
+/** A section with every field hidden on the current release renders nothing but a title. */
+export function sectionHasVisibleFields(section, answers) {
+  return section.fields.some((field) => fieldApplies(field, answers))
 }
 
 /** Description for a path, used by the field tooltips. */
