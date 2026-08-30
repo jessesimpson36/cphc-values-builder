@@ -17,6 +17,13 @@
       "version": "13.12.8",
       "appVersion": "8.8",
       "repository": "https://helm.camunda.io"
+    },
+    {
+      "key": "8.7",
+      "chart": "camunda-platform",
+      "version": "12.13.3",
+      "appVersion": "8.7",
+      "repository": "https://helm.camunda.io"
     }
   ],
   "scripts": {
