@@ -29,9 +29,15 @@ function flatten(obj, parentPath = '') {
 describe('round-trip', () => {
   for (const scenario of scenarios) {
     it(`${scenario.name} survives generate → import → generate`, () => {
+      // A values.yaml carries no version marker of its own — App.jsx supplies
+      // whatever the form currently has selected, and reapplies it after
+      // import for the same reason. Mirrored here: import against the same
+      // release the file was generated for, the one a same-release round trip
+      // would actually use.
+      const version = scenario.answers.chartVersion
       const generated = transformAnswers(scenario.answers)
-      const { answers } = importValues(generated)
-      const regenerated = transformAnswers(answers)
+      const { answers } = importValues(generated, version)
+      const regenerated = transformAnswers({ ...answers, chartVersion: version })
 
       expect(flatten(regenerated)).toEqual(flatten(generated))
     })
@@ -40,7 +46,7 @@ describe('round-trip', () => {
   it('round-trips through YAML text, not just objects', () => {
     const scenario = scenarios.find((s) => s.name === 'production-full-stack')
     const text = dumpValues(transformAnswers(scenario.answers))
-    const { answers } = importValues(loadValues(text))
+    const { answers } = importValues(loadValues(text), scenario.answers.chartVersion)
 
     expect(flatten(transformAnswers(answers))).toEqual(flatten(loadValues(text)))
   })

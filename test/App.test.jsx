@@ -141,6 +141,42 @@ describe('choosing a Camunda release', () => {
   })
 })
 
+describe('release-specific sections', () => {
+  it('shows the three Zeebe/Operate/Tasklist env sections on 8.7 instead of one merged section', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByRole('button', { name: '8.7' }))
+
+    // The 8.8+ section has no equivalent field on 8.7, so it must not render
+    // as an empty card with just a title.
+    expect(screen.queryByText('Orchestration Cluster Environment Variables')).toBeNull()
+    expect(screen.getByText('Zeebe Environment Variables')).toBeDefined()
+    expect(screen.getByText('Operate Environment Variables')).toBeDefined()
+    expect(screen.getByText('Tasklist Environment Variables')).toBeDefined()
+  })
+
+  it('reverses cleanly back to the merged section on 8.9', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByRole('button', { name: '8.7' }))
+    fireEvent.click(screen.getByRole('button', { name: '8.9' }))
+
+    expect(screen.getByText('Orchestration Cluster Environment Variables')).toBeDefined()
+    expect(screen.queryByText('Zeebe Environment Variables')).toBeNull()
+  })
+
+  it('offers only the inline password field for Elasticsearch auth on 8.7 — no existing-secret mode', () => {
+    render(<App />)
+    selectProduct('Orchestration Cluster')
+    fireEvent.click(screen.getByRole('button', { name: '8.7' }))
+    clickOption('elasticsearch')
+
+    const card = screen.getByText('Elasticsearch Configuration').closest('.card')
+    expect(within(card).getByPlaceholderText('Password')).toBeDefined()
+    expect(within(card).queryByRole('button', { name: 'Existing secret' })).toBeNull()
+  })
+})
+
 describe('importing a values.yaml', () => {
   it('keeps the selected release, since a values.yaml does not record one', async () => {
     render(<App />)

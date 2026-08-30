@@ -34,6 +34,7 @@ import { fileURLToPath } from 'url'
 import { displayConfig } from '../src/displayConfig.js'
 import { transformAnswers } from '../src/transform.js'
 import { SUPPORTED_VERSIONS, isPathAvailable } from '../src/chartVersions.js'
+import { resolveFieldPath } from '../src/fieldPaths.js'
 import { flattenLeafPaths } from '../src/objectPaths.js'
 import { scenarios } from '../test/scenarios.js'
 
@@ -53,12 +54,24 @@ for (const chart of SUPPORTED_VERSIONS) {
   const validPaths = new Set(JSON.parse(fs.readFileSync(schemaPath, 'utf8')).map((f) => f.path))
   const checked = new Map()
 
-  // Source 1: declared fields, excluding those hidden on this release.
+  // Source 1: declared fields, resolved to whatever path each one writes on
+  // THIS release — not the field's default path. A field with a per-version
+  // override (src/fieldPaths.js) writes somewhere else entirely on some
+  // releases; checking its default path there would validate the wrong string
+  // and silently skip the one that actually matters.
+  //
+  // isPathAvailable additionally excludes a field whose resolved path is a
+  // real string but simply does not exist on this release AT ALL — e.g. a
+  // field with no override whose single default path happens to be
+  // orchestration-cluster-only and this release still calls that "zeebe".
+  // Such a field is invisible on this release by construction (fieldApplies
+  // hides it the same way), so it would never actually be written here.
   for (const section of displayConfig.sections) {
     for (const field of section.fields) {
-      if (!field.path) continue
-      if (!isPathAvailable(field.path, chart.key)) continue
-      checked.set(field.path, `displayConfig ${section.id} → ${field.id}`)
+      const resolvedPath = resolveFieldPath(field, chart.key)
+      if (!resolvedPath) continue
+      if (!isPathAvailable(resolvedPath, chart.key)) continue
+      checked.set(resolvedPath, `displayConfig ${section.id} → ${field.id}`)
     }
   }
 

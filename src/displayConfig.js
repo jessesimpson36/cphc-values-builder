@@ -29,6 +29,8 @@
  * transform.js, so stale answers cannot leak into the generated file.
  */
 
+import { resolveFieldPath } from './fieldPaths.js'
+
 // Secret inputs offer two modes. Inline writes the value straight into the
 // generated YAML, which is convenient for a trial cluster and wrong for a real
 // one; existingSecret references a Kubernetes Secret the user creates outside
@@ -37,12 +39,73 @@ const INLINE = 'Inline value'
 const EXISTING = 'Existing secret'
 const SECRET_MODES = [INLINE, EXISTING]
 
+// Builds { path, paths } for one of the three secretFields sub-concepts
+// (inline / existingSecret / existingSecretKey), applying a per-version
+// override where one is given. A version absent from `overrides` falls
+// through to the default, base-derived path.
+function secretPath(leaf, defaultPath, overrides) {
+  const paths = {}
+  for (const [version, override] of Object.entries(overrides)) {
+    if (Object.prototype.hasOwnProperty.call(override, leaf)) {
+      paths[version] = override[leaf]
+    }
+  }
+  return Object.keys(paths).length > 0 ? { path: defaultPath, paths } : { path: defaultPath }
+}
+
 // Builds the three fields that make up one credential input: the mode toggle,
 // the inline value, and the existing-secret reference. `base` is the path of
 // the secret object in the chart, e.g. 'global.elasticsearch.auth.secret'.
-function secretFields(idPrefix, base, label, { required = false } = {}) {
+//
+// `overrides` handles a release whose chart puts the same credential at a
+// different path, or offers fewer of the three options at all — Camunda 8.7
+// predates the `<base>.secret.{inlineSecret,existingSecret,existingSecretKey}`
+// convention entirely. Each entry is keyed by release, e.g.:
+//
+//   { '8.7': { inline: 'global.elasticsearch.auth.password', existingSecret: null, existingSecretKey: null } }
+//
+// An explicit `null` means that release's chart has no such option at all —
+// not a typo. When existingSecret is null for the selected release, the mode
+// toggle and its two sub-fields disappear entirely and the inline field shows
+// unconditionally, rather than letting a user pick "Existing secret" and
+// silently write nothing.
+function secretFields(idPrefix, base, label, { required = false, overrides = {} } = {}) {
   const modeId = `${idPrefix}_secret_mode`
   const mode = (answers) => answers[modeId] || INLINE
+
+  const inlineField = {
+    id: idPrefix,
+    ...secretPath('inline', `${base}.inlineSecret`, overrides),
+    label,
+    type: 'password',
+    required,
+  }
+  const existingSecretField = {
+    id: `${idPrefix}_existing_secret`,
+    ...secretPath('existingSecret', `${base}.existingSecret`, overrides),
+    label: 'Existing secret name',
+    type: 'text',
+    required,
+  }
+  const existingSecretKeyField = {
+    id: `${idPrefix}_existing_secret_key`,
+    ...secretPath('existingSecretKey', `${base}.existingSecretKey`, overrides),
+    label: 'Key within the secret',
+    type: 'text',
+    required,
+  }
+
+  // A field with a `paths` override resolving to null for the current release
+  // has no chart equivalent there at all.
+  const isAvailable = (field) => (answers) =>
+    resolveFieldPath(field, answers.chartVersion) !== null
+
+  const existingSecretOffered = isAvailable(existingSecretField)
+
+  inlineField.showIf = (answers) =>
+    isAvailable(inlineField)(answers) && (mode(answers) === INLINE || !existingSecretOffered(answers))
+  existingSecretField.showIf = (answers) => existingSecretOffered(answers) && mode(answers) === EXISTING
+  existingSecretKeyField.showIf = existingSecretField.showIf
 
   return [
     {
@@ -52,31 +115,11 @@ function secretFields(idPrefix, base, label, { required = false } = {}) {
       type: 'radio',
       options: SECRET_MODES,
       required: false,
+      showIf: existingSecretOffered,
     },
-    {
-      id: idPrefix,
-      path: `${base}.inlineSecret`,
-      label,
-      type: 'password',
-      required,
-      showIf: (answers) => mode(answers) === INLINE,
-    },
-    {
-      id: `${idPrefix}_existing_secret`,
-      path: `${base}.existingSecret`,
-      label: 'Existing secret name',
-      type: 'text',
-      required,
-      showIf: (answers) => mode(answers) === EXISTING,
-    },
-    {
-      id: `${idPrefix}_existing_secret_key`,
-      path: `${base}.existingSecretKey`,
-      label: 'Key within the secret',
-      type: 'text',
-      required,
-      showIf: (answers) => mode(answers) === EXISTING,
-    },
+    inlineField,
+    existingSecretField,
+    existingSecretKeyField,
   ]
 }
 
@@ -181,7 +224,10 @@ export const displayConfig = {
         answers.databaseType === 'elasticsearch',
       fields: [
         { id: 'es_username', path: 'global.elasticsearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', { required: true }),
+        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', {
+          required: true,
+          overrides: { '8.7': { inline: 'global.elasticsearch.auth.password', existingSecret: null, existingSecretKey: null } },
+        }),
         { id: 'es_protocol', path: 'global.elasticsearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'es_host',     path: 'global.elasticsearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'es_port',     path: 'global.elasticsearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -200,7 +246,10 @@ export const displayConfig = {
         answers.databaseType === 'opensearch',
       fields: [
         { id: 'os_username', path: 'global.opensearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', { required: true }),
+        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', {
+          required: true,
+          overrides: { '8.7': { inline: 'global.opensearch.auth.password', existingSecret: null, existingSecretKey: null } },
+        }),
         { id: 'os_protocol', path: 'global.opensearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'os_host',     path: 'global.opensearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'os_port',     path: 'global.opensearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -220,7 +269,10 @@ export const displayConfig = {
         answers.databaseType === 'elasticsearch',
       fields: [
         { id: 'es_username', path: 'global.elasticsearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', { required: true }),
+        ...secretFields('es_password', 'global.elasticsearch.auth.secret', 'Password', {
+          required: true,
+          overrides: { '8.7': { inline: 'global.elasticsearch.auth.password', existingSecret: null, existingSecretKey: null } },
+        }),
         { id: 'es_protocol', path: 'global.elasticsearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'es_host',     path: 'global.elasticsearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'es_port',     path: 'global.elasticsearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -240,7 +292,10 @@ export const displayConfig = {
         answers.databaseType === 'opensearch',
       fields: [
         { id: 'os_username', path: 'global.opensearch.auth.username',            label: 'Username',   type: 'text',     required: true  },
-        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', { required: true }),
+        ...secretFields('os_password', 'global.opensearch.auth.secret', 'Password', {
+          required: true,
+          overrides: { '8.7': { inline: 'global.opensearch.auth.password', existingSecret: null, existingSecretKey: null } },
+        }),
         { id: 'os_protocol', path: 'global.opensearch.url.protocol',             label: 'Protocol',   type: 'radio',    required: true, options: ['http', 'https'] },
         { id: 'os_host',     path: 'global.opensearch.url.host',                 label: 'Host',       type: 'text',     required: true  },
         { id: 'os_port',     path: 'global.opensearch.url.port',                 label: 'Port',       type: 'text',     required: true  },
@@ -291,7 +346,16 @@ export const displayConfig = {
         { id: 'identity_db_host',     path: 'identity.externalDatabase.host',                label: 'Host',          type: 'text',     required: true  },
         { id: 'identity_db_port',     path: 'identity.externalDatabase.port',                label: 'Port',          type: 'text',     required: true  },
         { id: 'identity_db_username', path: 'identity.externalDatabase.username',            label: 'Username',      type: 'text',     required: true  },
-        ...secretFields('identity_db_password', 'identity.externalDatabase.secret', 'Password', { required: true }),
+        ...secretFields('identity_db_password', 'identity.externalDatabase.secret', 'Password', {
+          required: true,
+          overrides: {
+            '8.7': {
+              inline: 'identity.externalDatabase.password',
+              existingSecret: 'identity.externalDatabase.existingSecret',
+              existingSecretKey: 'identity.externalDatabase.existingSecretPasswordKey',
+            },
+          },
+        }),
         { id: 'identity_db_name',     path: 'identity.externalDatabase.database',            label: 'Database Name', type: 'text',     required: true  },
       ]
     },
@@ -305,7 +369,12 @@ export const displayConfig = {
         { id: 'wm_db_host',     path: 'webModeler.restapi.externalDatabase.host',                  label: 'Host',          type: 'text',     required: true  },
         { id: 'wm_db_port',     path: 'webModeler.restapi.externalDatabase.port',                  label: 'Port',          type: 'text',     required: true  },
         { id: 'wm_db_user',     path: 'webModeler.restapi.externalDatabase.user',                  label: 'Username',      type: 'text',     required: true  },
-        ...secretFields('wm_db_password', 'webModeler.restapi.externalDatabase.secret', 'Password', { required: true }),
+        ...secretFields('wm_db_password', 'webModeler.restapi.externalDatabase.secret', 'Password', {
+          required: true,
+          overrides: {
+            '8.7': { inline: 'webModeler.restapi.externalDatabase.password', existingSecret: null, existingSecretKey: null },
+          },
+        }),
         { id: 'wm_db_name',     path: 'webModeler.restapi.externalDatabase.database',              label: 'Database Name', type: 'text',     required: true  },
       ]
     },
@@ -316,7 +385,15 @@ export const displayConfig = {
       id: 'license',
       title: 'Enterprise License',
       showIf: (answers) => answers.products.length > 0,
-      fields: secretFields('license', 'global.license.secret', 'License key'),
+      fields: secretFields('license', 'global.license.secret', 'License key', {
+        overrides: {
+          '8.7': {
+            inline: 'global.license.key',
+            existingSecret: 'global.license.existingSecret',
+            existingSecretKey: 'global.license.existingSecretKey',
+          },
+        },
+      }),
     },
 
     // ── Web Modeler SMTP ───────────────────────────────────────────────────────
@@ -334,7 +411,11 @@ export const displayConfig = {
         { id: 'wm_smtp_port',         path: 'webModeler.restapi.mail.smtpPort',       label: 'SMTP port',         type: 'text',     required: false },
         { id: 'wm_smtp_user',         path: 'webModeler.restapi.mail.smtpUser',       label: 'SMTP username',     type: 'text',     required: false },
         { id: 'wm_smtp_tls',          path: 'webModeler.restapi.mail.smtpTlsEnabled', label: 'Enforce STARTTLS',  type: 'checkbox', required: false },
-        ...secretFields('wm_smtp_password', 'webModeler.restapi.mail.secret', 'SMTP password'),
+        ...secretFields('wm_smtp_password', 'webModeler.restapi.mail.secret', 'SMTP password', {
+          overrides: {
+            '8.7': { inline: 'webModeler.restapi.mail.smtpPassword', existingSecret: null, existingSecretKey: null },
+          },
+        }),
       ]
     },
 
@@ -430,15 +511,17 @@ export const displayConfig = {
         },
         // Manual mode writes these paths directly. Throughput mode computes them
         // in transform.js and ignores whatever is typed here.
-        { id: 'cluster_size',       path: 'orchestration.clusterSize',       label: 'Broker count (clusterSize)', type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'partition_count',    path: 'orchestration.partitionCount',    label: 'Partition count',            type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'replication_factor', path: 'orchestration.replicationFactor', label: 'Replication factor',         type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'pvc_size',           path: 'orchestration.pvcSize',           label: 'Disk per broker',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'storage_class',      path: 'orchestration.pvcStorageClassName', label: 'Storage class',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode !== 'Chart defaults' },
-        { id: 'cpu_request',        path: 'orchestration.resources.requests.cpu',    label: 'CPU request',    type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'cpu_limit',          path: 'orchestration.resources.limits.cpu',      label: 'CPU limit',      type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'memory_request',     path: 'orchestration.resources.requests.memory', label: 'Memory request', type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
-        { id: 'memory_limit',       path: 'orchestration.resources.limits.memory',   label: 'Memory limit',   type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        // Camunda 8.8 merged Zeebe into "Orchestration Cluster"; 8.7's chart still
+        // calls the broker component "zeebe" and these settings live there.
+        { id: 'cluster_size',       path: 'orchestration.clusterSize',       paths: { '8.7': 'zeebe.clusterSize' },       label: 'Broker count (clusterSize)', type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'partition_count',    path: 'orchestration.partitionCount',    paths: { '8.7': 'zeebe.partitionCount' },    label: 'Partition count',            type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'replication_factor', path: 'orchestration.replicationFactor', paths: { '8.7': 'zeebe.replicationFactor' }, label: 'Replication factor',         type: 'text', required: true, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'pvc_size',           path: 'orchestration.pvcSize',           paths: { '8.7': 'zeebe.pvcSize' },           label: 'Disk per broker',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'storage_class',      path: 'orchestration.pvcStorageClassName', paths: { '8.7': 'zeebe.pvcStorageClassName' }, label: 'Storage class',            type: 'text', required: false, showIf: (answers) => answers.sizing_mode !== 'Chart defaults' },
+        { id: 'cpu_request',        path: 'orchestration.resources.requests.cpu',    paths: { '8.7': 'zeebe.resources.requests.cpu' },    label: 'CPU request',    type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'cpu_limit',          path: 'orchestration.resources.limits.cpu',      paths: { '8.7': 'zeebe.resources.limits.cpu' },      label: 'CPU limit',      type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'memory_request',     path: 'orchestration.resources.requests.memory', paths: { '8.7': 'zeebe.resources.requests.memory' }, label: 'Memory request', type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
+        { id: 'memory_limit',       path: 'orchestration.resources.limits.memory',   paths: { '8.7': 'zeebe.resources.limits.memory' },   label: 'Memory limit',   type: 'text', required: false, showIf: (answers) => answers.sizing_mode === 'Manual' },
       ]
     },
 
@@ -530,13 +613,25 @@ export const displayConfig = {
         { id: 'doc_aws_region',     path: 'global.documentStore.type.aws.region',      label: 'AWS region',      type: 'text',     required: true,  showIf: (a) => a.document_store_type === 'AWS S3' },
         { id: 'doc_aws_path',       path: 'global.documentStore.type.aws.bucketPath',  label: 'Path prefix',     type: 'text',     required: false, showIf: (a) => a.document_store_type === 'AWS S3' },
         { id: 'doc_aws_irsa',       path: 'global.documentStore.type.aws.irsa.enabled', label: 'Authenticate with IRSA instead of keys', type: 'checkbox', required: false, showIf: (a) => a.document_store_type === 'AWS S3' },
-        ...secretFields('doc_aws_access_key', 'global.documentStore.type.aws.accessKeyId.secret', 'AWS access key ID')
-          .map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
-        ...secretFields('doc_aws_secret_key', 'global.documentStore.type.aws.secretAccessKey.secret', 'AWS secret access key')
-          .map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
+        ...secretFields('doc_aws_access_key', 'global.documentStore.type.aws.accessKeyId.secret', 'AWS access key ID', {
+          overrides: { '8.7': { inline: null, existingSecret: null, existingSecretKey: null } },
+        }).map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
+        ...secretFields('doc_aws_secret_key', 'global.documentStore.type.aws.secretAccessKey.secret', 'AWS secret access key', {
+          overrides: { '8.7': { inline: null, existingSecret: null, existingSecretKey: null } },
+        }).map((f) => ({ ...f, showIf: (a) => a.document_store_type === 'AWS S3' && !a.doc_aws_irsa && (f.showIf ? f.showIf(a) : true) })),
         { id: 'doc_gcp_bucket',        path: 'global.documentStore.type.gcp.bucket',                label: 'GCS bucket',                type: 'text', required: true,  showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
-        { id: 'doc_gcp_secret',        path: 'global.documentStore.type.gcp.secret.existingSecret', label: 'Service account secret name', type: 'text', required: true, showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
-        { id: 'doc_gcp_secret_key',    path: 'global.documentStore.type.gcp.secret.existingSecretKey', label: 'Key within the secret',  type: 'text', required: false, showIf: (a) => a.document_store_type === 'GCP Cloud Storage' },
+        {
+          id: 'doc_gcp_secret', path: 'global.documentStore.type.gcp.secret.existingSecret',
+          paths: { '8.7': 'global.documentStore.type.gcp.existingSecret' },
+          label: 'Service account secret name', type: 'text', required: true,
+          showIf: (a) => a.document_store_type === 'GCP Cloud Storage',
+        },
+        {
+          id: 'doc_gcp_secret_key', path: 'global.documentStore.type.gcp.secret.existingSecretKey',
+          paths: { '8.7': 'global.documentStore.type.gcp.credentialsKey' },
+          label: 'Key within the secret', type: 'text', required: false,
+          showIf: (a) => a.document_store_type === 'GCP Cloud Storage',
+        },
       ]
     },
 
@@ -585,7 +680,7 @@ export const displayConfig = {
       title: 'Orchestration gRPC Ingress',
       showIf: (answers) => answers.products.includes('orchestration'),
       fields: [
-        { id: 'grpc_enabled', path: 'orchestration.ingress.grpc.enabled', label: 'Enable gRPC Ingress', type: 'checkbox', required: false },
+        { id: 'grpc_enabled', path: 'orchestration.ingress.grpc.enabled', paths: { '8.7': 'zeebeGateway.ingress.grpc.enabled' }, label: 'Enable gRPC Ingress', type: 'checkbox', required: false },
       ]
     },
 
@@ -596,9 +691,9 @@ export const displayConfig = {
       title: 'Orchestration gRPC Ingress Configuration',
       showIf: (answers) => answers.products.includes('orchestration') && answers.grpc_enabled === true,
       fields: [
-        { id: 'grpc_class',       path: 'orchestration.ingress.grpc.className',   label: 'Ingress Class', type: 'text',     required: false },
-        { id: 'grpc_host',        path: 'orchestration.ingress.grpc.host',         label: 'Host',          type: 'text',     required: false },
-        { id: 'grpc_tls_enabled', path: 'orchestration.ingress.grpc.tls.enabled',  label: 'Enable TLS',    type: 'checkbox', required: false },
+        { id: 'grpc_class',       path: 'orchestration.ingress.grpc.className',   paths: { '8.7': 'zeebeGateway.ingress.grpc.className' },   label: 'Ingress Class', type: 'text',     required: false },
+        { id: 'grpc_host',        path: 'orchestration.ingress.grpc.host',         paths: { '8.7': 'zeebeGateway.ingress.grpc.host' },         label: 'Host',          type: 'text',     required: false },
+        { id: 'grpc_tls_enabled', path: 'orchestration.ingress.grpc.tls.enabled',  paths: { '8.7': 'zeebeGateway.ingress.grpc.tls.enabled' },  label: 'Enable TLS',    type: 'checkbox', required: false },
       ]
     },
 
@@ -609,7 +704,7 @@ export const displayConfig = {
       title: 'Orchestration gRPC Ingress TLS Configuration',
       showIf: (answers) => answers.products.includes('orchestration') && answers.grpc_enabled === true && answers.grpc_tls_enabled === true,
       fields: [
-        { id: 'grpc_tls_secret', path: 'orchestration.ingress.grpc.tls.secretName', label: 'TLS Secret Name', type: 'text', required: false },
+        { id: 'grpc_tls_secret', path: 'orchestration.ingress.grpc.tls.secretName', paths: { '8.7': 'zeebeGateway.ingress.grpc.tls.secretName' }, label: 'TLS Secret Name', type: 'text', required: false },
       ]
     },
 
@@ -619,7 +714,42 @@ export const displayConfig = {
       title: 'Orchestration Cluster Environment Variables',
       showIf: (answers) => answers.products.includes('orchestration'),
       fields: [
+        // 'orchestration.env' does not exist on 8.7 (see the three sections
+        // below), so this field is hidden there automatically — no version
+        // check needed here.
         { id: 'orchestration_env', path: 'orchestration.env', label: 'Environment Variables', type: 'env_vars', required: false }
+      ]
+    },
+
+    // ── Zeebe / Operate / Tasklist Environment Variables (8.7 only) ─────────────
+    // Camunda 8.8 merged these into one Orchestration Cluster with one shared
+    // env array. 8.7's chart still runs them as three separate components,
+    // each with its own env vars — writing one input to all three would put a
+    // Zeebe-specific variable in front of Operate and Tasklist too, which is
+    // wrong, not just imprecise. Each field's single-version path means the
+    // section above and these three are mutually exclusive automatically.
+    {
+      id: 'zeebeEnv',
+      title: 'Zeebe Environment Variables',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        { id: 'zeebe_env', path: 'zeebe.env', label: 'Environment Variables', type: 'env_vars', required: false }
+      ]
+    },
+    {
+      id: 'operateEnv',
+      title: 'Operate Environment Variables',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        { id: 'operate_env', path: 'operate.env', label: 'Environment Variables', type: 'env_vars', required: false }
+      ]
+    },
+    {
+      id: 'tasklistEnv',
+      title: 'Tasklist Environment Variables',
+      showIf: (answers) => answers.products.includes('orchestration'),
+      fields: [
+        { id: 'tasklist_env', path: 'tasklist.env', label: 'Environment Variables', type: 'env_vars', required: false }
       ]
     },
 

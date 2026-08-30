@@ -14,6 +14,13 @@
       "version": "13.12.8",
       "appVersion": "8.8",
       "repository": "https://helm.camunda.io"
+    },
+    {
+      "key": "8.7",
+      "chart": "camunda-platform",
+      "version": "12.13.3",
+      "appVersion": "8.7",
+      "repository": "https://helm.camunda.io"
     }
   ],
   "fields": {
@@ -21,14 +28,16 @@
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/connectors/connectors-configuration/ for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "console.env": {
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/console/configuration/ for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.aws.accessKeyId.secret.existingSecret": {
@@ -56,28 +65,32 @@
       "description": "Name of the AWS S3 bucket.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.aws.bucketPath": {
       "description": "can be used to define a key prefix within the S3 bucket (for example documents/invoices), not an endpoint URL.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.aws.irsa.enabled": {
       "description": "if true, no static AWS credentials are injected into pods, so the AWS SDK resolves credentials through its default provider chain; this supports both IRSA and EKS Pod Identity. If false (default), credentials are required via existingSecret or accessKeyId/secretAccessKey configuration.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.aws.region": {
       "description": "AWS region for the S3 bucket. (example: us-east-1)",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.aws.secretAccessKey.secret.existingSecret": {
@@ -105,7 +118,8 @@
       "description": "Name of the GCP bucket.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.documentStore.type.gcp.secret.existingSecret": {
@@ -147,70 +161,80 @@
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.auth.username or orchestration.data.secondaryStorage.elasticsearch.auth.username) the username for external elasticsearch",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.elasticsearch.tls.enabled": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.tls.enabled or orchestration.data.secondaryStorage.elasticsearch.tls) if true, enable tls for external elasticsearch",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.elasticsearch.url.host": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.host or orchestration.data.secondaryStorage.elasticsearch.url) Elasticsearch.host defines the elasticsearch host, ideally the service name inside the namespace",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.elasticsearch.url.port": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.port or orchestration.data.secondaryStorage.elasticsearch.url) Elasticsearch.port defines the elasticsearch port, under which elasticsearch can be accessed",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.elasticsearch.url.protocol": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.elasticsearch.url.protocol or orchestration.data.secondaryStorage.elasticsearch.url) defines the elasticsearch access protocol.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.ingress.className": {
       "description": "Ingress.className defines the class or configuration of ingress which should be used by the controller",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.ingress.enabled": {
       "description": "if true, an ingress resource is deployed. Only useful if an ingress controller is available, like Ingress-NGINX.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.ingress.host": {
       "description": "(DEPRECATED - use global.host instead) If not specified the rules applies to all inbound http traffic, if specified the rule applies to that host. Supports templating (e.g., {{ .Release.Name }}.example.com).",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.ingress.tls.enabled": {
       "description": "if true, then tls is configured on the ingress resource. If enabled the Ingress.host need to be defined.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.ingress.tls.secretName": {
       "description": "defines the secret name which contains the TLS private key and certificate",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.license.secret.existingSecret": {
@@ -259,35 +283,40 @@
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.auth.username or orchestration.data.secondaryStorage.opensearch.auth.username) the username for external opensearch",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.opensearch.tls.enabled": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.tls.enabled or orchestration.data.secondaryStorage.opensearch.tls) if true, enable tls for external opensearch",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.opensearch.url.host": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.host or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch host, ideally the service name inside the namespace",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.opensearch.url.port": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.port or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch port, under which opensearch can be accessed",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.opensearch.url.protocol": {
       "description": "(DEPRECATED - use component-specific options instead, e.g., optimize.database.opensearch.url.protocol or orchestration.data.secondaryStorage.opensearch.url) defines the external opensearch access protocol",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "global.security.authentication.method": {
@@ -315,28 +344,32 @@
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/management-identity/miscellaneous/configuration-variables/ for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "identity.externalDatabase.database": {
       "description": "The database name",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "identity.externalDatabase.host": {
       "description": "Database host",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "identity.externalDatabase.port": {
       "description": "Database port number",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "identity.externalDatabase.secret.existingSecret": {
@@ -364,14 +397,22 @@
       "description": "Non-root username",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
+      ]
+    },
+    "operate.env": {
+      "description": "can be used to set extra environment variables in each Operate container",
+      "versions": [
+        "8.7"
       ]
     },
     "optimize.env": {
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/optimize/configuration/system-configuration/ for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "orchestration.clusterSize": {
@@ -549,32 +590,42 @@
         "8.8"
       ]
     },
+    "tasklist.env": {
+      "description": "can be used to set extra environment variables on each Tasklist container",
+      "versions": [
+        "8.7"
+      ]
+    },
     "webModeler.restapi.env": {
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/modeler/web-modeler/configuration/ for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.externalDatabase.database": {
       "description": "The database name (used when url is not provided)",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.externalDatabase.host": {
       "description": "Database host (used when url is not provided)",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.externalDatabase.port": {
       "description": "Database port number (used when url is not provided)",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.externalDatabase.secret.existingSecret": {
@@ -602,21 +653,24 @@
       "description": "(DEPRECATED - use webModeler.restapi.externalDatabase.username instead) defines the database user",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.fromAddress": {
       "description": "defines the email address that will be displayed as the sender of emails sent by WebModeler",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.fromName": {
       "description": "defines the name that will be displayed as the sender of emails sent by WebModeler",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.secret.existingSecret": {
@@ -644,35 +698,46 @@
       "description": "defines the host name of the SMTP server to be used by WebModeler",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.smtpPort": {
       "description": "defines the port number of the SMTP server",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.smtpTlsEnabled": {
       "description": "if true, enforces TLS encryption for SMTP connections (using STARTTLS)",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.restapi.mail.smtpUser": {
       "description": "can be used to provide a user for the SMTP server",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
       ]
     },
     "webModeler.websockets.env": {
       "description": "can be used to set extra environment variables in the app container. See the documentation https://docs.camunda.io/docs/self-managed/components/modeler/web-modeler/configuration/#configuration-of-the-websocket-component for more details.",
       "versions": [
         "8.9",
-        "8.8"
+        "8.8",
+        "8.7"
+      ]
+    },
+    "zeebe.env": {
+      "description": "can be used to set extra environment variables in each zeebe broker container",
+      "versions": [
+        "8.7"
       ]
     }
   }

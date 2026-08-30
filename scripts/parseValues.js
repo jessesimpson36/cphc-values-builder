@@ -213,7 +213,10 @@ process.stdout.write(
 )
 
 if (notEverywhere.length > 0) {
-  process.stdout.write(`[parse] ${notEverywhere.length} path(s) are not in every supported version:\n`)
+  // Not necessarily a problem: a field with a per-version path override is
+  // expected to show up here on every release except the one it defaults to.
+  // Worth skimming after touching fieldPaths overrides or adding a release.
+  process.stdout.write(`[parse] ${notEverywhere.length} path(s) are release-scoped (expected for per-version overrides):\n`)
   for (const p of notEverywhere) {
     process.stdout.write(`           ${p} -> only ${fields[p].versions.join(', ')}\n`)
   }
