@@ -11,7 +11,7 @@
 # build needs no network access to the Camunda chart repository and no `npm run
 # parse` step.
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app
 
